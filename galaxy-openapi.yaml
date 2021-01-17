@@ -1,0 +1,54 @@
+openapi: 3.0.2
+info:
+  title: FastAPI
+  version: 0.1.0
+paths:
+  "/taxii2":
+    get:
+      tags:
+      - exchange
+      summary: Roots Discovery
+      operationId: roots_discovery_taxii2_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DiscoveryResponseModel"
+components:
+  schemas:
+    DiscoveryResponseModel:
+      title: DiscoveryResponseModel
+      required:
+      - api_roots
+      - contact
+      - default
+      - description
+      - title
+      type: object
+      properties:
+        api_roots:
+          title: Api Roots
+          type: array
+          items: {}
+        contact:
+          title: Contact
+          type: string
+        default:
+          title: Default
+          type: string
+        description:
+          title: Description
+          type: string
+        title:
+          title: Title
+          type: string
+      example:
+        title: Galaxy TAXII Server
+        description: This TAXII Server contains a listing of Stix2 Collections
+        contact: ayman@lab.local
+        default: http://localhost:6000/feed1/
+        api_roots:
+        - http://localhost:6000/feed1/
+        - http://localhost:6000/feed2/
