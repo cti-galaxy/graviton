@@ -1,32 +1,27 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
 
 from routes import taxii
-from middleware.logging import log_info, log_error
-
-from initialize import BackInit
+from middleware.logging import log_info
 
 
 ORIGINS = ["http://localhost:3000"]
 
-services_up = BackInit.ping_services()
 
-if services_up:
-    BackInit.services_prep()
-    app = FastAPI()
+app = FastAPI()
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=ORIGINS,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-    app.include_router(taxii.router)
+app.include_router(taxii.router)
 
-    log_info('Galaxy server is running ..')
+log_info('Galaxy server is running ..')
 
-else:
-    log_error('Galaxy is not ready to start, one or more data access service is down')
-
+if __name__ == '__main__':
+    uvicorn.run(app, port=4000, host='0.0.0.0')

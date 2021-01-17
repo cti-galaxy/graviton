@@ -8,9 +8,18 @@ class TAXII(object):
 
     @classmethod
     def get_discovery(cls):
+        result = {}
         log_debug('Request to Get Discovery Info')
-        taxii_discovery = cls.es_client.get_doc(index='galaxy-discovery', doc_id='discovery')
-        return taxii_discovery['data']
+        try:
+            result = cls.es_client.get_doc(index='galaxy-discovery', doc_id='discovery')
+            return result['data']
+        except Exception as e:
+            log_error(e)
+            result["status"] = 'fail'
+            result["payload"] = {
+                "message": "Error (D:1) Failed to Get Discovery Information .."
+            }
+            return result
 
     @classmethod
     def get_object(cls):

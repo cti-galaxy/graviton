@@ -4,10 +4,16 @@ from typing import List, Optional
 # /** Discovery Schema **\
 # ####################### #
 
+# / Base Models\
+
+
+class DiscoveryFailed(BaseModel):
+    message: str
+
 # / Requests and Response Models\
 
 
-class DiscoveryResponseModel(BaseModel):
+class DiscoveryResponse(BaseModel):
     api_roots: list
     contact: str
     default: str
@@ -25,5 +31,21 @@ class DiscoveryResponseModel(BaseModel):
                     "http://localhost:6000/feed1/",
                     "http://localhost:6000/feed2/"
                 ]
+            }
+        }
+
+
+class DiscoveryFailedResponse(BaseModel):
+    status: str
+    payload: DiscoveryFailed
+
+    class Config:
+
+        schema_extra = {
+            "example": {
+                "status": "fail",
+                "payload": {
+                    "message": "Error (D:1) Failed to Get Discovery Information .."
+                }
             }
         }

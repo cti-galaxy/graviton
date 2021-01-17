@@ -1,56 +1,74 @@
 import time
 import json
 from elasticsearch import Elasticsearch, helpers
-from middleware.logging import log_info, log_error
+from middleware.logging import log_debug, log_info, log_error
 
 
-class EsClient(Elasticsearch):
+class EsClient():
 
     # Class Attributes
     default_settings = json.load(open('config/settings.json'))
-    es_host = default_settings.get('services')['elasticsearch']['host']
-    connection = Elasticsearch(es_host)
-
+    SETTINGS = json.load(open('config/settings.json'))
+    TAXII_DEFAULT_DISCOVERY = json.load(open('config/defaults/data/discovery.json'))
+    TAXII_DEFAULT_ROOTS = [
+        json.load(open('config/defaults/data/roots-feed1.json')),
+        json.load(open('config/defaults/data/roots-feed2.json'))
+    ]
+    TAXXI_DEFAULT_COLLECTIONS = [
+        json.load(open('config/defaults/data/feeds-collection1.json')),
+        json.load(open('config/defaults/data/feeds-collection2.json')),
+        json.load(open('config/defaults/data/feeds-collection3.json')),
+        json.load(open('config/defaults/data/feeds-collection4.json'))
+    ]
 
     # Constructor
-    def __init__(self, host=es_host):
-        super().__init__(hosts=[host])
+    def __init__(self,
+                 host=SETTINGS.get('services')['elasticsearch']['host'],
+                 discovery_data=None,
+                 roots_data=None,
+                 collections_data=None
+                 ):
+
+        if discovery_data is None:
+            discovery_data = self.TAXII_DEFAULT_DISCOVERY
+        if collections_data is None:
+            collections_data = self.TAXXI_DEFAULT_COLLECTIONS
+        if roots_data is None:
+            roots_data = self.TAXII_DEFAULT_ROOTS
+
+        self.client = Elasticsearch(hosts=host)
+
+        log_info("Checking if ElasticSearch is Up!")
+        if self.client.ping():
+            log_info("ElasticSearch is Up!")
+            log_debug("Loading Data ..")
+            try:
+                if not self.client.indices.exists(discovery_data.get('_index')):
+                    log_info(f"Creating {discovery_data.get('_index')} index...")
+                    self.client.indices.create(index=discovery_data.get('_index'))
+                for root in roots_data:
+                    if not self.client.indices.exists(root.get('_index')):
+                        log_info(f"Creating {root.get('_index')} index...")
+                        self.client.indices.create(index=root.get('_index'))
+                root_to_update = roots_data[0]
+                root_to_update.update({
+                    "_source": {
+                        'collections': collections_data
+                    }
+                })
+                log_info(f"Loading data in discovery and root indices...")
+                bulk_data = [discovery_data, root_to_update, roots_data[1]]
+                helpers.bulk(self.client, bulk_data)
+            except Exception as e:
+                log_error(e)
+        else:
+            log_error("ElasticSearch is Down!")
 
     # Methods
-    def is_alive(self):
-        return self.connection.ping()
-
-    def es_load_defaults(self, discovery, roots, collections):
-        try:
-            if not self.indices.exists(discovery.get('_index')):
-                log_info(f"Creating {discovery.get('_index')} index...")
-                self.indices.create(index=discovery.get('_index'))
-            for root in roots:
-                if not self.indices.exists(root.get('_index')):
-                    log_info(f"Creating {root.get('_index')} index...")
-                    self.indices.create(index=root.get('_index'))
-            root_to_update = roots[0]
-            root_to_update.update({
-                "_source": {
-                    'collections': collections
-                }
-            })
-            log_info(f"Loading data in discovery and root indices...")
-            bulk_data = [discovery, root_to_update, roots[1]]
-            helpers.bulk(self, bulk_data)
-
-            return {
-                "result": True
-            }
-        except Exception as e:
-            log_error(e)
-            return {
-                "result": False
-            }
 
     def get_docs(self, index: str):
         try:
-            res = self.connection.search(index=index, size=10, sort='_id')
+            res = self.client.search(index=index, size=10, sort='_id')
             results = []
             for result in res['hits']['hits']:
                 response = {}
@@ -69,7 +87,7 @@ class EsClient(Elasticsearch):
 
     def get_doc(self, index: str, doc_id: str):
         try:
-            res = self.connection.get(index=index, id=doc_id)
+            res = self.client.get(index=index, id=doc_id)
             return {
                 "data": res.get('_source'),
             }
@@ -79,7 +97,7 @@ class EsClient(Elasticsearch):
 
     def store_doc(self, index: str, data: object,  doc_id=int(round(time.time() * 1000))):
         try:
-            res = self.connection.index(
+            res = self.client.index(
                 index=index,
                 id=doc_id,
                 body=data,
@@ -104,7 +122,7 @@ class EsClient(Elasticsearch):
                         "_source": doc
                     }
             res = helpers.bulk(
-                self,
+                self.client,
                 yield_bulk_data(data)
             )
             return {
@@ -116,7 +134,7 @@ class EsClient(Elasticsearch):
 
     def delete_doc(self, index: str, doc_id: str):
         try:
-            res = self.connection.delete(index=index, id=doc_id)
+            res = self.client.delete(index=index, id=doc_id)
             return {
                 "index": res['_index'],
                 "id": res['_id'],
@@ -128,7 +146,7 @@ class EsClient(Elasticsearch):
 
     def delete_doc_by_query(self, index: str, query: dict):
         try:
-            res = self.connection.delete_by_query(index=index, body=query)
+            res = self.client.delete_by_query(index=index, body=query)
             return {
                 "index": index,
                 "result": res
@@ -139,7 +157,7 @@ class EsClient(Elasticsearch):
 
     def update_doc(self, index: str, data: object,  doc_id: str):
         try:
-            res = self.connection.update(
+            res = self.client.update(
                 index=index,
                 id=doc_id,
                 body={
