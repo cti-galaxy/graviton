@@ -6,7 +6,7 @@ paths:
   "/taxii2":
     get:
       tags:
-      - exchange
+      - discovery
       summary: Roots Discovery
       operationId: roots_discovery_taxii2_get
       responses:
