@@ -14,18 +14,27 @@ class AcceptHeaderValidator(BaseHTTPMiddleware):
         super().__init__(app)
 
     async def dispatch(self, request, call_next):
-        validation_result = None
-        request = await call_next(request)
-        header_to_validate = request.headers.get('accept', "").replace(" ", "").split(",")
-        if type(header_to_validate) == list:
-            for item in header_to_validate:
-                validation_result = re.match(self.header_value, item)
-                print (validation_result)
-        else:
-            validation_result = re.match(self.header_value, header_to_validate)
-            print(validation_result)
+        header_found = False
+        header_is_valid = False
+        response = await call_next(request)
+        accept_header = request.headers.get('accept', "").replace(" ", "").split(",")
+        for item in accept_header:
+            validation_result = re.match(r"^application/taxii\+json(;version=(\d\.\d))?$", item)
+            if validation_result:
+                if len(validation_result.groups()) >= 1:
+                    version_str = validation_result.group(2)
+                    if version_str != "2.1":
+                        header_is_valid = False
+                header_found = True
+                break
 
-        return validation_result
+        if header_found is False:
+            print("Media type in the Accept header is invalid or not found", 406)
+        elif header_is_valid is False:
+            print ("Media type in the Accept header is invalid or not found", 406)
+
+        return response
+
 
 
 ValidationMiddleware = [
