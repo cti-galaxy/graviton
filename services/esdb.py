@@ -1,7 +1,7 @@
 import time
 import json
 from elasticsearch import Elasticsearch, helpers
-from middlewares.logging import log_debug, log_info, log_error
+from middleware.logging import log_debug, log_info, log_error
 
 
 class EsClient():

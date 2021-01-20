@@ -175,8 +175,8 @@ class ErrorMessageModel(BaseModel):
     error_id: Optional[str] = Field(description='The error code for this error type. A TAXII Server might choose to '
                                                 'assign a common error code to all errors of the same type.')
     error_code: Optional[str] = Field(description='The HTTP status code applicable to this error. '
-                                                'If this property is provided it will match the HTTP status code '
-                                                'found in the HTTP header.')
+                                                  'If this property is provided it will match the HTTP status code '
+                                                  'found in the HTTP header.')
     http_status: Optional[str] = Field(description='The HTTP status code applicable to this error. If this property is '
                                                    'provided it MUST match the HTTP status code found in the '
                                                    'HTTP header.')

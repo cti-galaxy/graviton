@@ -1,9 +1,9 @@
 import uvicorn
 from fastapi import FastAPI
-from middlewares.validators import ValidationMiddleware
+from middleware.validators import ValidationMiddleware
 
 from routes import taxii
-from middlewares.logging import log_info
+from middleware.logging import log_info
 
 
 app = FastAPI(middleware=ValidationMiddleware)

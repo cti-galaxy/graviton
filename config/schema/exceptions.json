@@ -1,0 +1,20 @@
+{
+    "AcceptHeaderInvalid": {
+        "title": "Media type in the Accept header is invalid or not found",
+        "description": "The accept header received is not application/taxii+json;version=2.1",
+        "error_id": "D:01",
+        "error_code": "406"
+    },
+    "UnsupportedAcceptHeader": {
+        "title": "The server only supports TAXII 2.1 response type",
+        "description": "The accept header received is not application/taxii+json;version=2.1",
+        "error_id": "D:02",
+        "error_code": "406"
+    },
+    "DiscoveryException": {
+        "title": "Failed to Get Discovery Information",
+        "description": "This error is resulted by a failed request to the backend ElasticSearch database",
+        "error_id": "D:03",
+        "error_code": "500"
+    }
+}

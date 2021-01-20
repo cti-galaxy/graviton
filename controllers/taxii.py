@@ -1,5 +1,8 @@
-from middlewares.logging import log_debug, log_info, log_error
+import json
+from middleware.logging import log_debug, log_info, log_error
 from services.esdb import EsClient
+
+EXCEPTIONS: dict = json.load(open('config/schema/exceptions.json'))
 
 
 class TAXII(object):
@@ -8,18 +11,14 @@ class TAXII(object):
 
     @classmethod
     def get_discovery(cls):
-        result = {}
         log_debug('Request to Get Discovery Info')
+
         try:
             result = cls.es_client.get_doc(index='galaxy-discovery', doc_id='discovery')
             return result['data']
         except Exception as e:
             log_error(e)
-            result["status"] = 'fail'
-            result["payload"] = {
-                "message": "Error (D:1) Failed to Get Discovery Information .."
-            }
-            return result
+            return EXCEPTIONS.get('DiscoveryException', {})
 
     @classmethod
     def get_object(cls):
