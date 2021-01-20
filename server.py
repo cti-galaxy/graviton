@@ -1,26 +1,15 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+from fastapi import FastAPI
+from middlewares.validators import ValidationMiddleware
 
 from routes import taxii
-from middleware.logging import log_info
+from middlewares.logging import log_info
 
 
-ORIGINS = ["http://localhost:3000"]
+app = FastAPI(middleware=ValidationMiddleware)
 
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 app.include_router(taxii.router)
-
 log_info('Galaxy server is running ..')
 
 if __name__ == '__main__':

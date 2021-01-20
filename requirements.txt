@@ -1,3 +1,4 @@
+starlette
 uvicorn
 docker~=4.4.1
 fastapi~=0.63.0

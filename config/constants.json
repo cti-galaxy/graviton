@@ -1,0 +1,7 @@
+{
+  "headers": {
+    "accept": "application/taxii+json;version=2.1",
+    "mimetype": "application/taxii+json;version=2.1"
+  },
+  "origins": ["http://localhost:3000"]
+}
