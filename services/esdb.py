@@ -7,18 +7,18 @@ from middleware.logging import log_debug, log_info, log_error
 class EsClient():
 
     # Class Attributes
-    default_settings = json.load(open('config/settings.json'))
-    SETTINGS = json.load(open('config/settings.json'))
-    TAXII_DEFAULT_DISCOVERY = json.load(open('config/defaults/data/discovery.json'))
+    default_settings = json.load(open('config/settings.json', encoding="utf8"))
+    SETTINGS = json.load(open('config/settings.json', encoding="utf8"))
+    TAXII_DEFAULT_DISCOVERY = json.load(open('config/defaults/data/discovery.json', encoding="utf8"))
     TAXII_DEFAULT_ROOTS = [
-        json.load(open('config/defaults/data/roots-feed1.json')),
-        json.load(open('config/defaults/data/roots-feed2.json'))
+        json.load(open('config/defaults/data/roots-feed1.json', encoding="utf8")),
+        json.load(open('config/defaults/data/roots-feed2.json', encoding="utf8"))
     ]
     TAXXI_DEFAULT_COLLECTIONS = [
-        json.load(open('config/defaults/data/feeds-collection1.json')),
-        json.load(open('config/defaults/data/feeds-collection2.json')),
-        json.load(open('config/defaults/data/feeds-collection3.json')),
-        json.load(open('config/defaults/data/feeds-collection4.json'))
+        json.load(open('config/defaults/data/feeds-collection1.json', encoding="utf8")),
+        json.load(open('config/defaults/data/feeds-collection2.json', encoding="utf8")),
+        json.load(open('config/defaults/data/feeds-collection3.json', encoding="utf8")),
+        json.load(open('config/defaults/data/feeds-collection4.json', encoding="utf8"))
     ]
 
     # Constructor
@@ -50,15 +50,13 @@ class EsClient():
                     if not self.client.indices.exists(root.get('_index')):
                         log_info(f"Creating {root.get('_index')} index...")
                         self.client.indices.create(index=root.get('_index'))
-                root_to_update = roots_data[0]
-                root_to_update.update({
-                    "_source": {
-                        'collections': collections_data
-                    }
-                })
-                log_info(f"Loading data in discovery and root indices...")
-                bulk_data = [discovery_data, root_to_update, roots_data[1]]
-                helpers.bulk(self.client, bulk_data)
+                        root_to_update = roots_data[0]
+                        root_to_update['_source'].update({
+                                'collections': collections_data
+                        })
+                        log_info(f"Loading data in discovery and root indices...")
+                        bulk_data = [discovery_data, root_to_update, roots_data[1]]
+                        helpers.bulk(self.client, bulk_data)
             except Exception as e:
                 log_error(e)
         else:

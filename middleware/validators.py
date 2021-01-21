@@ -5,8 +5,8 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 
-CONSTANTS: dict = json.load(open('config/constants.json'))
-EXCEPTIONS: dict = json.load(open('config/schema/exceptions.json'))
+CONSTANTS: dict = json.load(open('config/constants.json', encoding="utf8"))
+EXCEPTIONS: dict = json.load(open('config/schema/exceptions.json', encoding="utf8"))
 
 
 class AcceptHeaderValidator(BaseHTTPMiddleware):
