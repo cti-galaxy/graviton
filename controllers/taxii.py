@@ -44,6 +44,16 @@ class TAXII(object):
             return EXCEPTIONS.get('DefaultAPIRootNotFoundException')
 
     @classmethod
+    def get_status(cls, api_root, status_id):
+        log_debug(f'Request to Get the status of {status_id}')
+        status = cls.es_client.get_doc(index=f'galaxy-{api_root}', doc_id='discovery').get('data')['api_roots']
+        if api_root in str(api_root_list):
+            result = cls.es_client.get_doc(index=f'galaxy-{api_root}', doc_id=api_root)
+            return result['data']['information']
+        else:
+            return EXCEPTIONS.get('APIRootNotFoundException')
+
+    @classmethod
     def post_objects(cls, cti_objects):
         log_info(f'Request to Post {len(cti_objects)} Objects')
 

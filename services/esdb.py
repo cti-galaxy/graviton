@@ -4,7 +4,7 @@ from elasticsearch import Elasticsearch, helpers
 from middleware.logging import log_debug, log_info, log_error
 
 
-class EsClient():
+class EsClient:
 
     # Class Attributes
     default_settings = json.load(open('config/settings.json', encoding="utf8"))
@@ -20,21 +20,27 @@ class EsClient():
         json.load(open('config/defaults/data/feeds-collection3.json', encoding="utf8")),
         json.load(open('config/defaults/data/feeds-collection4.json', encoding="utf8"))
     ]
+    TAXXI_DEFAULT_STATUS = [
+        json.load(open('config/defaults/data/feeds-status1.json', encoding="utf8")),
+        json.load(open('config/defaults/data/feeds-status2.json', encoding="utf8"))
+    ]
 
     # Constructor
     def __init__(self,
                  host=SETTINGS.get('services')['elasticsearch']['host'],
                  discovery_data=None,
                  roots_data=None,
-                 collections_data=None
+                 collections_data=None,
+                 status_data=None
                  ):
-
         if discovery_data is None:
             discovery_data = self.TAXII_DEFAULT_DISCOVERY
         if collections_data is None:
             collections_data = self.TAXXI_DEFAULT_COLLECTIONS
         if roots_data is None:
             roots_data = self.TAXII_DEFAULT_ROOTS
+        if status_data is None:
+            status_data = self.TAXXI_DEFAULT_STATUS
 
         self.client = Elasticsearch(hosts=host)
 
@@ -44,19 +50,27 @@ class EsClient():
             log_debug("Loading Data ..")
             try:
                 if not self.client.indices.exists(discovery_data.get('_index')):
-                    log_info(f"Creating {discovery_data.get('_index')} index...")
+                    log_info(f"Loading default data in {discovery_data.get('_index')} index...")
                     self.client.indices.create(index=discovery_data.get('_index'))
+                    helpers.bulk(self.client, [discovery_data])
                 for root in roots_data:
                     if not self.client.indices.exists(root.get('_index')):
-                        log_info(f"Creating {root.get('_index')} index...")
+                        log_info(f"Loading default data in {root.get('_index')} index...")
                         self.client.indices.create(index=root.get('_index'))
-                        root_to_update = roots_data[0]
-                        root_to_update['_source'].update({
-                                'collections': collections_data
-                        })
-                        log_info(f"Loading data in discovery and root indices...")
-                        bulk_data = [discovery_data, root_to_update, roots_data[1]]
-                        helpers.bulk(self.client, bulk_data)
+                        helpers.bulk(self.client, [roots_data])
+
+                for status in status_data:
+                    if not self.client.indices.exists(status.get('_index')):
+                        log_info(f"Loading default data in {status.get('_index')} index...")
+                        self.client.indices.create(index=status.get('_index'))
+                        helpers.bulk(self.client, [status_data])
+
+                for collection in collections_data:
+                    if not self.client.indices.exists(collection.get('_index')):
+                        log_info(f"Loading default data in {collection.get('_index')} index...")
+                        self.client.indices.create(index=collection.get('_index'))
+                        helpers.bulk(self.client, [collections_data])
+
             except Exception as e:
                 log_error(e)
         else:

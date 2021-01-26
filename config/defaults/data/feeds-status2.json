@@ -1,0 +1,16 @@
+{
+    "_index": "feed1-status",
+    "_id": "2d086da7-4bdc-4f91-900e-f4566be4b780",
+    "_source": {
+        "id": "2d086da7-4bdc-4f91-900e-f4566be4b780",
+        "status": "pending",
+        "request_timestamp": "2020-11-02T12:34:34.123456Z",
+        "total_objects": 0,
+        "success_count": 0,
+        "successes": [],
+        "failure_count": 0,
+        "failures": [],
+        "pending_count": 0,
+        "pendings": []
+    }
+}

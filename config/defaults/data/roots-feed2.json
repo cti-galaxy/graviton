@@ -1,5 +1,5 @@
 {
-    "_index": "galaxy-feed2",
+    "_index": "feeds",
     "_id": "feed2",
     "_score": 1.0,
     "_source": {
@@ -10,8 +10,6 @@
                 "application/taxii+json;version=2.1"
             ],
             "max_content_length": 9765625
-        },
-        "status": [],
-        "collections": []
+        }
     }
 }

@@ -27,6 +27,22 @@ async def roots_discovery():
         return JSONResponse(status_code=200, media_type=MEDIA_TYPE, content=response)
 
 
+@router.get("/{api_root}/status/{status_id}",
+            response_model=StatusModel,
+            responses={500: {"model": ErrorMessageModel}},
+            summary="Get status information for a specific status ID",
+            tags=["API Roots"])
+async def get_status(api_root: str, status_id: str):
+    """
+    This Endpoint provides information about the status of a previous request
+    """
+    response = TAXII.get_status(api_root, status_id)
+    if response.get('error_code'):
+        return JSONResponse(status_code=int(response.get('error_code')), content=response)
+    else:
+        return JSONResponse(status_code=200, media_type=MEDIA_TYPE, content=response)
+
+
 @router.get("/{api_root}",
             response_model=APIRootModel,
             responses={500: {"model": ErrorMessageModel}},

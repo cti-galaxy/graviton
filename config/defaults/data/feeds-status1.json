@@ -1,0 +1,37 @@
+{
+    "_index": "feed1-status",
+    "_id": "2d086da7-4bdc-4f91-900e-d77486753710",
+    "_source": {
+        "id": "2d086da7-4bdc-4f91-900e-d77486753710",
+        "status": "pending",
+        "request_timestamp": "2020-11-02T12:34:34.123456Z",
+        "total_count": 4,
+        "success_count": 1,
+        "successes": [
+            {
+                "id": "indicator--cd981c25-8042-4166-8945-51178443bdac",
+                "version": "2020-05-08T09:00:00.000Z",
+                "message": "Successfully added object to collection '91a7b528-80eb-42ed-a74d-c6fbd5a26116'."
+            }
+        ],
+        "failure_count": 1,
+        "failures": [
+            {
+                "id": "malware--664fa29d-bf65-4f28-a667-bdb76f29ec98",
+                "version": "2020-05-09T09:00:00.000Z",
+                "message": "Unable to process object"
+            }
+        ],
+        "pending_count": 2,
+        "pendings": [
+            {
+                "id": "indicator--252c7c11-daf2-42bd-843b-be65edca9f61",
+                "version": "2020-08-10T09:00:00.000Z"
+            },
+            {
+                "id": "relationship--045585ad-a22f-4333-af33-bfd503a683b5",
+                "version": "2020-06-11T09:00:00.000Z"
+            }
+        ]
+    }
+}
