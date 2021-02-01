@@ -57,26 +57,24 @@ class EsClient:
                     if not self.client.indices.exists(root.get('_index')):
                         log_info(f"Loading default data in {root.get('_index')} index...")
                         self.client.indices.create(index=root.get('_index'))
-                        helpers.bulk(self.client, [roots_data])
-
+                        helpers.bulk(self.client, roots_data)
                 for status in status_data:
                     if not self.client.indices.exists(status.get('_index')):
                         log_info(f"Loading default data in {status.get('_index')} index...")
                         self.client.indices.create(index=status.get('_index'))
-                        helpers.bulk(self.client, [status_data])
-
+                        helpers.bulk(self.client, status_data)
                 for collection in collections_data:
                     if not self.client.indices.exists(collection.get('_index')):
                         log_info(f"Loading default data in {collection.get('_index')} index...")
                         self.client.indices.create(index=collection.get('_index'))
-                        helpers.bulk(self.client, [collections_data])
+                        helpers.bulk(self.client, collections_data)
 
             except Exception as e:
                 log_error(e)
         else:
             log_error("ElasticSearch is Down!")
 
-    # Methods
+    # Object Methods
 
     def get_docs(self, index: str):
         try:

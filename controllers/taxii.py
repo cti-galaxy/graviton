@@ -15,7 +15,7 @@ class TAXII(object):
         log_debug('Request to Get Discovery Info')
 
         try:
-            result = cls.es_client.get_doc(index='galaxy-discovery', doc_id='discovery')
+            result = cls.es_client.get_doc(index='discovery', doc_id='discovery')
             return result['data']
         except Exception as e:
             log_error(e)
@@ -23,10 +23,10 @@ class TAXII(object):
 
     @classmethod
     def get_api_root_information(cls, api_root):
-        log_debug('Request to Get an API Root Information')
-        api_root_list = cls.es_client.get_doc(index='galaxy-discovery', doc_id='discovery').get('data')['api_roots']
+        log_debug(f'Request to Get {api_root} Root Information')
+        api_root_list = cls.es_client.get_doc(index='discovery', doc_id='discovery').get('data')['api_roots']
         if api_root in str(api_root_list):
-            result = cls.es_client.get_doc(index=f'galaxy-{api_root}', doc_id=api_root)
+            result = cls.es_client.get_doc(index='feeds', doc_id=api_root)
             return result['data']['information']
         else:
             return EXCEPTIONS.get('APIRootNotFoundException')
@@ -35,9 +35,9 @@ class TAXII(object):
     def get_default_root_information(cls):
         log_debug('Request to Get Default API Root Information')
         try:
-            default_api_root_url = cls.es_client.get_doc(index='galaxy-discovery', doc_id='discovery').get('data')['default']
+            default_api_root_url = cls.es_client.get_doc(index='discovery', doc_id='discovery').get('data')['default']
             default_api_root = urlparse(default_api_root_url)[2].partition('/')[2].partition('/')[0]
-            result = cls.es_client.get_doc(index=f'galaxy-{default_api_root}', doc_id=default_api_root)
+            result = cls.es_client.get_doc(index='feeds', doc_id=default_api_root)
             return result['data']['information']
         except Exception as e:
             log_error(e)
@@ -45,13 +45,13 @@ class TAXII(object):
 
     @classmethod
     def get_status(cls, api_root, status_id):
-        log_debug(f'Request to Get the status of {status_id}')
-        status = cls.es_client.get_doc(index=f'galaxy-{api_root}', doc_id='discovery').get('data')['api_roots']
-        if api_root in str(api_root_list):
-            result = cls.es_client.get_doc(index=f'galaxy-{api_root}', doc_id=api_root)
-            return result['data']['information']
-        else:
-            return EXCEPTIONS.get('APIRootNotFoundException')
+        log_debug(f'Request to Get the status of {status_id} from {api_root}')
+        try:
+            result = cls.es_client.get_doc(index=f'{api_root}-status', doc_id=status_id)
+            return result['data']
+        except Exception as e:
+            log_error(e)
+            return EXCEPTIONS.get('StatusNotFoundException')
 
     @classmethod
     def post_objects(cls, cti_objects):

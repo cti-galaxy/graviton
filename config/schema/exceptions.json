@@ -28,5 +28,11 @@
         "description": "A Default API Root is not configured, you can send a discovery request to get a list of API Roots ",
         "error_id": "D:05",
         "error_code": "404"
+    },
+    "StatusNotFoundException": {
+        "title": "Status Not Found",
+        "description": "The status with the ID specified is not found under this root ",
+        "error_id": "S:01",
+        "error_code": "404"
     }
 }
