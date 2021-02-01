@@ -11,11 +11,11 @@ class Collections(object):
     es_client = EsClient()
 
     @classmethod
-    def get_collection_manifest(cls, api_root, collection_id):
-        log_debug(f'Request to Get Manifest Info of Collection: {collection_id} in the Feed Root: {api_root}')
+    def get_collection_objects(cls, api_root, collection_id):
+        log_debug(f'Request to Get The objects of Collection: {collection_id} in the Feed Root: {api_root}')
 
         try:
-            result = cls.es_client.get_doc(index=f'{api_root}-collections', doc_id=collection_id)['data']['manifest']
+            result = cls.es_client.get_doc(index=f'{api_root}-collections', doc_id=collection_id)['data']['objects']
             return {
                 'objects': result
             }
@@ -28,6 +28,10 @@ class Collections(object):
         log_debug(f'Request to Get all Collections under {api_root} Root')
         try:
             result = cls.es_client.get_docs(index=f'{api_root}-collections').get('data')
+            for collection in result:
+                collection.pop("manifest", None)
+                collection.pop("responses", None)
+                collection.pop("objects", None)
             return {
                 'collections': result
             }
@@ -36,26 +40,17 @@ class Collections(object):
             return EXCEPTIONS.get('APIRootNotFoundException', {})
 
     @classmethod
-    def get_default_root_information(cls):
-        log_debug('Request to Get Default API Root Information')
+    def get_collection(cls, api_root, collection_id):
+        log_debug(f'Request to Get Collection {collection_id} from Feed: {api_root}')
         try:
-            default_api_root_url = cls.es_client.get_doc(index='discovery', doc_id='discovery').get('data')['default']
-            default_api_root = urlparse(default_api_root_url)[2].partition('/')[2].partition('/')[0]
-            result = cls.es_client.get_doc(index='feeds', doc_id=default_api_root)
-            return result['data']['information']
+            result = cls.es_client.get_doc(index=f'{api_root}-collections', doc_id=collection_id).get('data')
+            result.pop("manifest", None)
+            result.pop("responses", None)
+            result.pop("objects", None)
+            return result
         except Exception as e:
             log_error(e)
-            return EXCEPTIONS.get('DefaultAPIRootNotFoundException')
-
-    @classmethod
-    def get_status(cls, api_root, status_id):
-        log_debug(f'Request to Get the status of {status_id} from {api_root}')
-        try:
-            result = cls.es_client.get_doc(index=f'{api_root}-status', doc_id=status_id)
-            return result['data']
-        except Exception as e:
-            log_error(e)
-            return EXCEPTIONS.get('StatusNotFoundException')
+            return EXCEPTIONS.get('CollectionNotFoundException', {})
 
     @classmethod
     def post_objects(cls, cti_objects):

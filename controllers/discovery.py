@@ -52,37 +52,3 @@ class Discovery(object):
         except Exception as e:
             log_error(e)
             return EXCEPTIONS.get('StatusNotFoundException')
-
-    @classmethod
-    def post_objects(cls, cti_objects):
-        log_info(f'Request to Post {len(cti_objects)} Objects')
-
-        result = {}
-        try:
-            entry = cls.es_client.store_docs(index="stix21", data=cti_objects.dict().get('objects'))
-            result["status"] = 'success'
-            result["payload"] = entry
-            return result
-        except Exception as e:
-            log_error(e)
-            result["status"] = 'fail'
-            result["payload"] = {
-                "message": "Error (E:4) while posting the object .."
-            }
-            return result
-
-    @classmethod
-    def delete_object(cls, object_id):
-        log_info(f'Request to Delete Object: {object_id}')
-        result = {}
-        res = cls.es_client.delete_doc(index="stix21", doc_id=object_id)
-        if res:
-            result["status"] = 'success'
-            result["payload"] = res
-            return result
-        else:
-            result["status"] = 'fail'
-            result["payload"] = {
-                "message": "Error (E:5) Object not found .."
-            }
-            return result
