@@ -168,18 +168,35 @@ class GetCollectionsModel(BaseModel):
         }
 
 
+class GetCollectionManifestModel(BaseModel):
+    objects: Optional[ManifestRecord] = Field(description='The list of manifest entries for objects returned by the '
+                                                          'request. If there are no manifest-record items in the list, '
+                                                          'this key is omitted, and the response is an empty '
+                                                          'object.')
+
+    class Config:
+        schema_extra = {
+            "id": "91a7b528-80eb-42ed-a74d-c6fbd5a26116",
+            "title": "High Value Indicator Collection",
+            "description": "This data collection contains high value IOCs",
+            "can_read": True,
+            "can_write": False,
+            "media_types": [
+                "application/stix+json;version=2.1"
+            ]
+        }
+
+
+# / Response Models\
+
+
 class ErrorMessageModel(BaseModel):
     title: str = Field(description='A human readable plain text title for this error.')
     description: Optional[str] = Field(description='A human readable plain text description that gives details about '
                                                    'the error or problem that was encountered by the application.')
-    error_id: Optional[str] = Field(description='The error code for this error type. A TAXII Server might choose to '
-                                                'assign a common error code to all errors of the same type.')
-    error_code: Optional[str] = Field(description='The HTTP status code applicable to this error. '
-                                                  'If this property is provided it will match the HTTP status code '
-                                                  'found in the HTTP header.')
-    http_status: Optional[str] = Field(description='The HTTP status code applicable to this error. If this property is '
-                                                   'provided it MUST match the HTTP status code found in the '
-                                                   'HTTP header.')
+    error_id: Optional[str] = Field(description='The error id for this error type.')
+    error_code: Optional[str] = Field(description='The HTTP error code applicable to this error.')
+    http_status: Optional[str] = Field(description='The HTTP status code applicable to this error.')
     external_details: Optional[str] = Field(description='A URL that points to additional details. For example, '
                                                         'this could be a URL pointing to a knowledge base article '
                                                         'describing the error code.')

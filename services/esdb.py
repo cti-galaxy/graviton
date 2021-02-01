@@ -1,6 +1,8 @@
 import time
 import json
 from elasticsearch import Elasticsearch, helpers
+from elasticsearch import exceptions as es_exceptions
+
 from middleware.logging import log_debug, log_info, log_error
 
 
@@ -101,9 +103,8 @@ class EsClient:
             return {
                 "data": res.get('_source'),
             }
-        except Exception as e:
-            log_error(e)
-            raise
+        except es_exceptions.NotFoundError as e:
+            raise e
 
     def store_doc(self, index: str, data: object,  doc_id=int(round(time.time() * 1000))):
         try:

@@ -6,7 +6,7 @@ from services.esdb import EsClient
 EXCEPTIONS: dict = json.load(open('config/schema/exceptions.json', encoding="utf8"))
 
 
-class TAXII(object):
+class Discovery(object):
 
     es_client = EsClient()
 

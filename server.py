@@ -5,7 +5,9 @@ from middleware.validators import ValidationMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from routes import taxii
+from routes import discovery
+from routes import collections
+
 from middleware.logging import log_info
 
 EXCEPTIONS: dict = json.load(open('config/schema/exceptions.json'))
@@ -25,7 +27,9 @@ async def http_exception_handler(request, exc):
     )
 
 
-app.include_router(taxii.router)
+app.include_router(discovery.router)
+app.include_router(collections.router)
+
 log_info('Galaxy server is running ..')
 
 if __name__ == '__main__':

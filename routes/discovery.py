@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from controllers.taxii import TAXII
+from controllers.discovery import Discovery
 
 from config.schema.taxii import DiscoveryModel, APIRootModel, \
-    StatusModel, GetCollectionsModel, ErrorMessageModel
+    StatusModel, ErrorMessageModel
 
 MEDIA_TYPE = "application/taxii+json;version=2.1"
 
@@ -18,9 +18,15 @@ router = APIRouter()
             tags=["Discovery"])
 async def roots_discovery():
     """
-    This Endpoint provides general information about a TAXII Server, including the advertised API Roots.
+    Defines TAXII API - Server Information:
+    Server Discovery section (4.1) `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107526>`__
+
+    Returns:
+        discovery: A Discovery Resource upon successful requests. Additional information
+        `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107527>`__.
+
     """
-    response = TAXII.roots_discovery()
+    response = Discovery.roots_discovery()
     if response.get('error_code'):
         return JSONResponse(status_code=int(response.get('error_code')), content=response)
     else:
@@ -31,12 +37,22 @@ async def roots_discovery():
             response_model=StatusModel,
             responses={500: {"model": ErrorMessageModel}},
             summary="Get status information for a specific status ID",
-            tags=["API Roots"])
+            tags=["Discovery"])
 async def get_status(api_root: str, status_id: str):
     """
-    This Endpoint provides information about the status of a previous request
+    Defines TAXII API - Server Information:
+    Get Status section (4.3) `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107530>`__
+
+    Args:
+        api_root (str): the base URL of the API Root
+        status_id (str): the `identifier` of the Status message being requested
+
+    Returns:
+        status: A Status Resource upon successful requests. Additional information
+        `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107531>`__.
+
     """
-    response = TAXII.get_status(api_root, status_id)
+    response = Discovery.get_status(api_root, status_id)
     if response.get('error_code'):
         return JSONResponse(status_code=int(response.get('error_code')), content=response)
     else:
@@ -47,13 +63,21 @@ async def get_status(api_root: str, status_id: str):
             response_model=APIRootModel,
             responses={500: {"model": ErrorMessageModel}},
             summary="Get information about a specific API Root",
-            tags=["API Roots"])
+            tags=["Discovery"])
 async def get_api_root_information(api_root: str):
     """
-    This Endpoint can be used to help users and clients decide whether and how they want to interact with a specific API Root.
-    Multiple API Roots MAY be hosted on a single TAXII Server. Often, an API Root represents a single trust group.
+    Defines TAXII API - Server Information:
+    Get API Root Information section (4.2) `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107528>`__
+
+    Args:
+        api_root (str): the base URL of the API Root
+
+    Returns:
+        api-root: An API Root Resource upon successful requests. Additional information
+        `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107529>`__.
+
     """
-    response = TAXII.get_api_root_information(api_root)
+    response = Discovery.get_api_root_information(api_root)
     if response.get('error_code'):
         return JSONResponse(status_code=int(response.get('error_code')), content=response)
     else:
@@ -64,12 +88,18 @@ async def get_api_root_information(api_root: str):
             response_model=APIRootModel,
             responses={500: {"model": ErrorMessageModel}},
             summary="Get information about the Default API Root",
-            tags=["API Roots"])
+            tags=["Discovery"])
 async def get_default_root_information():
     """
-    This Endpoint can be used to help users and clients decide whether and how they want to interact with the default API Root.
+    Defines TAXII API - Server Information:
+    Get Default API Root Information section (4.2) `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107528>`__
+
+    Returns:
+        api-root: An API Root Resource upon successful requests. Additional information
+        `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107529>`__.
+
     """
-    response = TAXII.get_default_root_information()
+    response = Discovery.get_default_root_information()
     if response.get('error_code'):
         return JSONResponse(status_code=int(response.get('error_code')), content=response)
     else:

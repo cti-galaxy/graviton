@@ -31,8 +31,14 @@
     },
     "StatusNotFoundException": {
         "title": "Status Not Found",
-        "description": "The status with the ID specified is not found under this root ",
+        "description": "The Status with the ID specified is not found under this root",
         "error_id": "S:01",
+        "error_code": "404"
+    },
+    "CollectionNotFoundException": {
+        "title": "Collection Not Found",
+        "description": "The Collection with the ID specified is not found under this root",
+        "error_id": "C:01",
         "error_code": "404"
     }
 }
