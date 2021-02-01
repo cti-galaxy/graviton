@@ -151,7 +151,7 @@ class StatusModel(BaseModel):
         }
 
 
-class GetCollectionsModel(BaseModel):
+class CollectionsModel(BaseModel):
     collections: Optional[Collection] = Field(description='A list of Collections. If there are no Collections, '
                                                           ' this key is omitted.')
 
@@ -168,7 +168,7 @@ class GetCollectionsModel(BaseModel):
         }
 
 
-class GetCollectionManifestModel(BaseModel):
+class CollectionManifestModel(BaseModel):
     objects: Optional[ManifestRecord] = Field(description='The list of manifest entries for objects returned by the '
                                                           'request. If there are no manifest-record items in the list, '
                                                           'this key is omitted, and the response is an empty '

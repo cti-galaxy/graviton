@@ -24,14 +24,16 @@ class Collections(object):
             return EXCEPTIONS.get('CollectionNotFoundException', {})
 
     @classmethod
-    def get_api_root_information(cls, api_root):
-        log_debug(f'Request to Get {api_root} Root Information')
-        api_root_list = cls.es_client.get_doc(index='discovery', doc_id='discovery').get('data')['api_roots']
-        if api_root in str(api_root_list):
-            result = cls.es_client.get_doc(index='feeds', doc_id=api_root)
-            return result['data']['information']
-        else:
-            return EXCEPTIONS.get('APIRootNotFoundException')
+    def get_collections(cls, api_root):
+        log_debug(f'Request to Get all Collections under {api_root} Root')
+        try:
+            result = cls.es_client.get_docs(index=f'{api_root}-collections').get('data')
+            return {
+                'collections': result
+            }
+        except Exception as e:
+            log_error(e)
+            return EXCEPTIONS.get('APIRootNotFoundException', {})
 
     @classmethod
     def get_default_root_information(cls):

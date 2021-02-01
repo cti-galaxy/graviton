@@ -3,8 +3,8 @@ from fastapi.responses import JSONResponse
 
 from controllers.collections import Collections
 
-from config.schema.taxii import APIRootModel, \
-    GetCollectionManifestModel, ErrorMessageModel
+from config.schema.taxii import APIRootModel, CollectionsModel, \
+    CollectionManifestModel, ErrorMessageModel
 
 MEDIA_TYPE = "application/taxii+json;version=2.1"
 
@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 @router.get("/{api_root}/collections/{collection_id}/manifest",
-            response_model=GetCollectionManifestModel,
+            response_model=CollectionManifestModel,
             responses={500: {"model": ErrorMessageModel}},
             summary="Get manifest information about the contents of a specific collection.",
             tags=["Collections"])
@@ -30,6 +30,8 @@ async def get_collection_manifest(api_root: str, collection_id: str):
         `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107538>`__.
 
     """
+    # TODO: Enforce Authorization
+    # TODO: Enable Paging
     response = Collections.get_collection_manifest(api_root, collection_id)
     if response.get('error_code'):
         return JSONResponse(status_code=int(response.get('error_code')), content=response)
@@ -40,21 +42,31 @@ async def get_collection_manifest(api_root: str, collection_id: str):
             return JSONResponse(status_code=200, media_type=MEDIA_TYPE, content=[])
 
 
-@router.get("/{api_root}",
-            response_model=APIRootModel,
+@router.get("/{api_root}/collections",
+            response_model=CollectionsModel,
             responses={500: {"model": ErrorMessageModel}},
-            summary="Get information about a specific API Root",
-            tags=["API Roots"])
-async def get_api_root_information(api_root: str):
+            summary="Get information about all collections",
+            tags=["Collections"])
+async def get_collections(api_root: str):
     """
-    This Endpoint can be used to help users and clients decide whether and how they want to interact with a specific API Root.
-    Multiple API Roots MAY be hosted on a single TAXII Server. Often, an API Root represents a single trust group.
+    Defines TAXII API - Collections:
+    Get Collection section (5.1) `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107533>`__
+
+    Args:
+        api_root (str): the base URL of the API Root
+
+    Returns:
+        collections: A Collections Resource upon successful requests. Additional information
+        `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107534>`__.
+
     """
-    response = Discovery.get_api_root_information(api_root)
-    if response.get('error_code'):
-        return JSONResponse(status_code=int(response.get('error_code')), content=response)
-    else:
+    # TODO: Enforce Authorization
+    # TODO: Enable Paging
+    response = Collections.get_collections(api_root)
+    if response.get('collections'):
         return JSONResponse(status_code=200, media_type=MEDIA_TYPE, content=response)
+    else:
+        return JSONResponse(status_code=200, media_type=MEDIA_TYPE, content=[])
 
 
 @router.get("/",

@@ -26,6 +26,7 @@ async def roots_discovery():
         `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107527>`__.
 
     """
+    # TODO: Enforce Authorization
     response = Discovery.roots_discovery()
     if response.get('error_code'):
         return JSONResponse(status_code=int(response.get('error_code')), content=response)
@@ -52,6 +53,7 @@ async def get_status(api_root: str, status_id: str):
         `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107531>`__.
 
     """
+    # TODO: Enforce Authorization
     response = Discovery.get_status(api_root, status_id)
     if response.get('error_code'):
         return JSONResponse(status_code=int(response.get('error_code')), content=response)
@@ -77,6 +79,7 @@ async def get_api_root_information(api_root: str):
         `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107529>`__.
 
     """
+    # TODO: Enforce Authorization
     response = Discovery.get_api_root_information(api_root)
     if response.get('error_code'):
         return JSONResponse(status_code=int(response.get('error_code')), content=response)
@@ -99,6 +102,7 @@ async def get_default_root_information():
         `here <https://docs.oasis-open.org/cti/taxii/v2.1/cs01/taxii-v2.1-cs01.html#_Toc31107529>`__.
 
     """
+    # TODO: Enforce Authorization
     response = Discovery.get_default_root_information()
     if response.get('error_code'):
         return JSONResponse(status_code=int(response.get('error_code')), content=response)
