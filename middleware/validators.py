@@ -14,10 +14,11 @@ class AcceptHeaderValidator(BaseHTTPMiddleware):
         super().__init__(app)
 
     async def dispatch(self, request, call_next):
-        result = {}
         taxii_header_exists = False
         wrong_taxii_header = False
         response = await call_next(request)
+        if request.url.path == '/docs' or request.url.path == '/openapi.json':
+            return response
         accept_header = request.headers.get("accept", "").replace(" ", "").split(",")
         for item in accept_header:
             item_header = re.match(r"^application/taxii\+json(;version=(\d\.\d))?$", item)

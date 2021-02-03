@@ -7,6 +7,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from routes import discovery
 from routes import collections
+from routes import objects
 
 from middleware.logging import log_info
 
@@ -26,9 +27,14 @@ async def http_exception_handler(request, exc):
         status_code=exc.status_code
     )
 
+# TODO: Enforce Authorization
+# TODO: Enable Paging
+# TODO: Review Error Codes
+# TODO: Review The Custom Headers
 
 app.include_router(discovery.router)
 app.include_router(collections.router)
+app.include_router(objects.router)
 
 log_info('Galaxy server is running ..')
 

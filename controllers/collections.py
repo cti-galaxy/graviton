@@ -1,7 +1,9 @@
 import json
-from urllib.parse import urlparse
 from middleware.logging import log_debug, log_info, log_error
 from services.esdb import EsClient
+from elasticsearch.exceptions import NotFoundError
+
+from .common import Helper
 
 EXCEPTIONS: dict = json.load(open('config/schema/exceptions.json', encoding="utf8"))
 
@@ -9,19 +11,6 @@ EXCEPTIONS: dict = json.load(open('config/schema/exceptions.json', encoding="utf
 class Collections(object):
 
     es_client = EsClient()
-
-    @classmethod
-    def get_collection_objects(cls, api_root, collection_id):
-        log_debug(f'Request to Get The objects of Collection: {collection_id} in the Feed Root: {api_root}')
-
-        try:
-            result = cls.es_client.get_doc(index=f'{api_root}-collections', doc_id=collection_id)['data']['objects']
-            return {
-                'objects': result
-            }
-        except Exception as e:
-            log_error(e)
-            return EXCEPTIONS.get('CollectionNotFoundException', {})
 
     @classmethod
     def get_collections(cls, api_root):
@@ -32,12 +21,16 @@ class Collections(object):
                 collection.pop("manifest", None)
                 collection.pop("responses", None)
                 collection.pop("objects", None)
+
             return {
                 'collections': result
             }
-        except Exception as e:
+        except NotFoundError as e:
             log_error(e)
             return EXCEPTIONS.get('APIRootNotFoundException', {})
+        except Exception as e:
+            log_error(e)
+            return EXCEPTIONS.get('CollectionsNotFoundException', {})
 
     @classmethod
     def get_collection(cls, api_root, collection_id):
@@ -51,6 +44,21 @@ class Collections(object):
         except Exception as e:
             log_error(e)
             return EXCEPTIONS.get('CollectionNotFoundException', {})
+
+    @classmethod
+    def get_collection_manifest(cls, api_root, collection_id, **query_parameters):
+        if query_parameters.get('added_after'):
+            print ('test')
+        log_debug(f'Request to Get The objects Manifest of Collection: {collection_id} in the Feed Root: {api_root}')
+        try:
+            result = cls.es_client.get_doc(index=f'{api_root}-collections', doc_id=collection_id)['data']['manifest']
+            return {
+                'objects': result
+            }
+        except Exception as e:
+            log_error(e)
+            return EXCEPTIONS.get('CollectionNotFoundException', {})
+
 
     @classmethod
     def post_objects(cls, cti_objects):

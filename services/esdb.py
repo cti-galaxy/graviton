@@ -60,15 +60,13 @@ class EsClient:
                         log_info(f"Loading default data in {root.get('_index')} index...")
                         self.client.indices.create(index=root.get('_index'))
                         helpers.bulk(self.client, roots_data)
-                for status in status_data:
-                    if not self.client.indices.exists(status.get('_index')):
-                        log_info(f"Loading default data in {status.get('_index')} index...")
-                        self.client.indices.create(index=status.get('_index'))
+                    if not self.client.indices.exists(f"{root.get('_id')}-status"):
+                        log_info(f"Loading default data in status index...")
+                        self.client.indices.create(index=f"{root.get('_id')}-status")
                         helpers.bulk(self.client, status_data)
-                for collection in collections_data:
-                    if not self.client.indices.exists(collection.get('_index')):
-                        log_info(f"Loading default data in {collection.get('_index')} index...")
-                        self.client.indices.create(index=collection.get('_index'))
+                    if not self.client.indices.exists(f"{root.get('_id')}-collections"):
+                        log_info(f"Loading default data in collections index...")
+                        self.client.indices.create(index=f"{root.get('_id')}-collections")
                         helpers.bulk(self.client, collections_data)
 
             except Exception as e:

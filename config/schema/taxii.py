@@ -35,6 +35,18 @@ class Collection(BaseModel):
     media_types: Optional[List[str]] = Field(description='A list of supported media types for Objects '
                                                          'in this Collection.')
 
+    class Config:
+        schema_extra = {
+            "id": "91a7b528-80eb-42ed-a74d-c6fbd5a26116",
+            "title": "High Value Indicator Collection",
+            "description": "This data collection contains high value IOCs",
+            "can_read": True,
+            "can_write": False,
+            "media_types": [
+                "application/stix+json;version=2.1"
+            ]
+        }
+
 
 class ManifestRecord(BaseModel):
     id: str = Field(description='The identifier of the object that this manifest entry describes.')
@@ -157,13 +169,48 @@ class CollectionsModel(BaseModel):
 
     class Config:
         schema_extra = {
-            "id": "91a7b528-80eb-42ed-a74d-c6fbd5a26116",
-            "title": "High Value Indicator Collection",
-            "description": "This data collection contains high value IOCs",
-            "can_read": True,
-            "can_write": False,
-            "media_types": [
-                "application/stix+json;version=2.1"
+            "collections": [
+                {
+                    "id": "91a7b528-80eb-42ed-a74d-c6fbd5a26116",
+                    "title": "High Value Indicator Collection",
+                    "description": "This data collection is for collecting high value IOCs",
+                    "can_read": True,
+                    "can_write": True,
+                    "media_types": [
+                        "application/stix+json;version=2.0",
+                        "application/stix+json;version=2.1"
+                    ]
+                },
+                {
+                    "id": "9f0725cb-4bc3-47c3-aba6-99cb97ba4f52",
+                    "title": "IMDDOS Botnet Report",
+                    "description": "IMDDOS Botnet Report",
+                    "can_read": True,
+                    "can_write": True,
+                    "media_types": [
+                        "application/stix+json;version=2.1"
+                    ]
+                },
+                {
+                    "id": "ac946f1d-6a0e-4a9d-bc83-3f1f3bfda6ba",
+                    "title": "Fireeye's Poison Ivy Report",
+                    "description": "Fireeye's Poison Ivy Report",
+                    "can_read": True,
+                    "can_write": True,
+                    "media_types": [
+                        "application/stix+json;version=2.1"
+                    ]
+                },
+                {
+                    "id": "cf20f99b-3ed2-4a9f-b4f1-d660a7fc8241",
+                    "title": "Mandiant's APT1 Report",
+                    "description": "Mandiant's APT1 Report",
+                    "can_read": True,
+                    "can_write": True,
+                    "media_types": [
+                        "application/stix+json;version=2.1"
+                    ]
+                }
             ]
         }
 

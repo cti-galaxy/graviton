@@ -1,5 +1,5 @@
-starlette
-uvicorn
+starlette~=0.13.6
+uvicorn~=0.13.3
 docker~=4.4.1
 fastapi~=0.63.0
 pydantic~=1.7.3
@@ -7,3 +7,4 @@ elasticsearch~=7.10.1
 requests~=2.25.1
 urllib3~=1.26.2
 python-multipart
+pytz~=2021.1

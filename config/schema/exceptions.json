@@ -1,12 +1,12 @@
 {
     "AcceptHeaderInvalid": {
-        "title": "Media type in the Accept header is invalid or not found",
+        "title": "The media type provided in the Accept header is invalid",
         "description": "The accept header received is not application/taxii+json;version=2.1",
         "error_id": "D:01",
         "error_code": "406"
     },
     "UnsupportedAcceptHeader": {
-        "title": "The server only supports TAXII 2.1 response type",
+        "title": "The media type provided in the Accept header is invalid",
         "description": "The accept header received is not application/taxii+json;version=2.1",
         "error_id": "D:02",
         "error_code": "406"
@@ -18,27 +18,39 @@
         "error_code": "500"
     },
     "APIRootNotFoundException": {
-        "title": "API Root not found",
+        "title": "The API Root is not found, or the client does not have access to the resource",
         "description": "This API Root is not configured, you can send a discovery request to get a list of API Roots ",
         "error_id": "D:04",
         "error_code": "404"
     },
     "DefaultAPIRootNotFoundException": {
-        "title": "Default API Root not configured",
+        "title": "The API Root is not found, or the client does not have access to the resource",
         "description": "A Default API Root is not configured, you can send a discovery request to get a list of API Roots ",
         "error_id": "D:05",
         "error_code": "404"
     },
     "StatusNotFoundException": {
-        "title": "Status Not Found",
+        "title": " The API Root or Status ID are not found, or the client does not have access to the resource",
         "description": "The Status with the ID specified is not found under this root",
         "error_id": "S:01",
         "error_code": "404"
     },
     "CollectionNotFoundException": {
-        "title": "Collection Not Found",
+        "title": " The API Root or Collection ID are not found, or the client does not have access to the collection resource",
         "description": "The Collection with the ID specified is not found under this root",
         "error_id": "C:01",
+        "error_code": "404"
+    },
+    "CollectionsNotFoundException": {
+        "title": "The API Root is not found, or the client does not have access to the collections resource",
+        "description": "No Collections Found Under This Route",
+        "error_id": "C:02",
+        "error_code": "404"
+    },
+    "ManifestNotFoundException": {
+        "title": "The API Root or Collection ID are not found, or the client does not have access to the manifest resource",
+        "description": "No Collections Found Under This Route",
+        "error_id": "C:02",
         "error_code": "404"
     }
 }
