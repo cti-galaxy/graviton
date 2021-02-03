@@ -2,6 +2,8 @@ import time
 import json
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch import exceptions as es_exceptions
+from elasticsearch_dsl import Search
+from elasticsearch_dsl.query import QueryString
 
 from middleware.logging import log_debug, log_info, log_error
 
@@ -35,39 +37,75 @@ class EsClient:
                  collections_data=None,
                  status_data=None
                  ):
+
+        collections = []
+        manifests_data = []
+        objects_data = []
+
+        self.client = Elasticsearch(hosts=host)
+
         if discovery_data is None:
             discovery_data = self.TAXII_DEFAULT_DISCOVERY
-        if collections_data is None:
-            collections_data = self.TAXXI_DEFAULT_COLLECTIONS
         if roots_data is None:
             roots_data = self.TAXII_DEFAULT_ROOTS
         if status_data is None:
             status_data = self.TAXXI_DEFAULT_STATUS
-
-        self.client = Elasticsearch(hosts=host)
+        if collections_data is None:
+            collections_data = self.TAXXI_DEFAULT_COLLECTIONS
+            for collection in collections_data:
+                manifests = collection['_source'].get('manifest')
+                if manifests:
+                    for manifest in manifests:
+                        manifest['_collection'] = collection.get('_id')
+                        manifests_data.append(manifest)
+            for collection in collections_data:
+                objects = collection['_source'].get('objects')
+                if objects:
+                    for object in objects:
+                        object['_collection'] = collection.get('_id')
+                        objects_data.append(object)
+            for collection in collections_data:
+                collection['_source'].pop("manifest", None)
+                collection['_source'].pop("responses", None)
+                collection['_source'].pop("objects", None)
+                collections.append(collection)
 
         log_info("Checking if ElasticSearch is Up!")
         if self.client.ping():
             log_info("ElasticSearch is Up!")
             log_debug("Loading Data ..")
             try:
+                # Create Discovery Index and Load Discovery Data
                 if not self.client.indices.exists(discovery_data.get('_index')):
                     log_info(f"Loading default data in {discovery_data.get('_index')} index...")
                     self.client.indices.create(index=discovery_data.get('_index'))
                     helpers.bulk(self.client, [discovery_data])
                 for root in roots_data:
+                    # Create API Roots Index and Load API Roots Data
                     if not self.client.indices.exists(root.get('_index')):
                         log_info(f"Loading default data in {root.get('_index')} index...")
                         self.client.indices.create(index=root.get('_index'))
                         helpers.bulk(self.client, roots_data)
+                    # Create Status Index and Load Status Data
                     if not self.client.indices.exists(f"{root.get('_id')}-status"):
                         log_info(f"Loading default data in status index...")
                         self.client.indices.create(index=f"{root.get('_id')}-status")
                         helpers.bulk(self.client, status_data)
+                    # Create Collections Index and Load Collections Data
                     if not self.client.indices.exists(f"{root.get('_id')}-collections"):
                         log_info(f"Loading default data in collections index...")
                         self.client.indices.create(index=f"{root.get('_id')}-collections")
-                        helpers.bulk(self.client, collections_data)
+                        helpers.bulk(self.client, collections)
+                    # Create Manifest Index and Load Manifest Data
+                    if not self.client.indices.exists(f"{root.get('_id')}-manifests"):
+                        log_info(f"Loading manifests data in manifests index...")
+                        self.client.indices.create(index=f"{root.get('_id')}-manifests")
+                        helpers.bulk(self.client, manifests_data)
+                    # Create Objects Index and Load Objects Data
+                    if not self.client.indices.exists(f"{root.get('_id')}-objects"):
+                        log_info(f"Loading objects data in object index...")
+                        self.client.indices.create(index=f"{root.get('_id')}-objects")
+                        helpers.bulk(self.client, objects_data)
 
             except Exception as e:
                 log_error(e)
@@ -103,6 +141,36 @@ class EsClient:
             }
         except es_exceptions.NotFoundError as e:
             raise e
+
+    def search(self, index: str, query: str = None, fields: str = None,
+               base_page: int = 0, size: int = 100, sort_field: str = None, sort_order: str = None):
+        try:
+            query_string = QueryString(query=query)
+            search = Search(using=self.client, index=index).query(query_string)[base_page:base_page + size]
+
+            if fields is not None:
+                fields = fields.split(',')
+                search = search.source(fields)
+
+            if sort_field is not None:
+                search = search.sort({sort_field: {'order': sort_order}})
+
+            search_results = search.execute().to_dict()
+            results = []
+            for result in search_results['hits']['hits']:
+                response = {}
+                response.update(result['_source'])
+                response.update({
+                    'id': result['_id']
+                })
+                results.append(response)
+            return {
+                "data": results,
+                "total": search_results['hits']['total']['value'],
+            }
+        except Exception as e:
+            log_error(e)
+            raise
 
     def store_doc(self, index: str, data: object,  doc_id=int(round(time.time() * 1000))):
         try:

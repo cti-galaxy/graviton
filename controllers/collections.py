@@ -44,7 +44,7 @@ class Collections(object):
         except Exception as e:
             log_error(e)
             return EXCEPTIONS.get('CollectionNotFoundException', {})
-
+    """
     @classmethod
     def get_collection_manifest(cls, api_root, collection_id, **query_parameters):
         if query_parameters.get('added_after'):
@@ -58,7 +58,22 @@ class Collections(object):
         except Exception as e:
             log_error(e)
             return EXCEPTIONS.get('CollectionNotFoundException', {})
+    """
 
+    @classmethod
+    def get_collection_manifest(cls, api_root, **query_parameters):
+        log_debug(f"Request to Get The objects Manifest of Collection: {query_parameters.get('collection_id')} "
+                  f"in the Feed Root: {api_root}")
+        try:
+            query = f"_id = {query_parameters.get('collection_id')}"
+            #result = cls.es_client.search(index=f'{api_root}-collections', query=query)['data']['manifest']
+            result = {}
+            return {
+                'objects': result
+            }
+        except Exception as e:
+            log_error(e)
+            return EXCEPTIONS.get('CollectionNotFoundException', {})
 
     @classmethod
     def post_objects(cls, cti_objects):

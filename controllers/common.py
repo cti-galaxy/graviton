@@ -478,6 +478,17 @@ class Filter:
 
         return final_match, save_next, headers
 
+    @staticmethod
+    def get_total_results(response_dict):
+        total_results = response_dict.get('hits', {}).get('total')
+        if not str(total_results).isdigit():
+            total_results = total_results.get('value')
+            total_dict = response_dict.get('hits').get('total')
+        else:
+            total_dict = {
+                'value': total_results,
+            }
+        return total_dict, total_results
 
 
 class Pagination:
