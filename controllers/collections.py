@@ -17,11 +17,6 @@ class Collections(object):
         log_debug(f'Request to Get all Collections under {api_root} Root')
         try:
             result = cls.es_client.get_docs(index=f'{api_root}-collections').get('data')
-            for collection in result:
-                collection.pop("manifest", None)
-                collection.pop("responses", None)
-                collection.pop("objects", None)
-
             return {
                 'collections': result
             }
@@ -37,9 +32,6 @@ class Collections(object):
         log_debug(f'Request to Get Collection {collection_id} from Feed: {api_root}')
         try:
             result = cls.es_client.get_doc(index=f'{api_root}-collections', doc_id=collection_id).get('data')
-            result.pop("manifest", None)
-            result.pop("responses", None)
-            result.pop("objects", None)
             return result
         except Exception as e:
             log_error(e)
@@ -64,12 +56,25 @@ class Collections(object):
     def get_collection_manifest(cls, api_root, **query_parameters):
         log_debug(f"Request to Get The objects Manifest of Collection: {query_parameters.get('collection_id')} "
                   f"in the Feed Root: {api_root}")
+        more = False
         try:
-            query = f"_id = {query_parameters.get('collection_id')}"
-            #result = cls.es_client.search(index=f'{api_root}-collections', query=query)['data']['manifest']
-            result = {}
+            query = f"collection = {query_parameters.get('collection_id')}"
+            if query_parameters.get('id'):
+                query = query + f", id = {query_parameters.get('id')}"
+            if int(query_parameters.get('limit')) > -1:
+                result = cls.es_client.search(index=f'{api_root}-manifest',
+                                              query=query,
+                                              size=int(query_parameters.get('limit')))
+            else:
+                result = cls.es_client.search(index=f'{api_root}-manifest',
+                                              query=query)
+
+            if int(result['total']) > int(query_parameters.get('limit')):
+                more = True
+
             return {
-                'objects': result
+                'more': more,
+                'objects': result['data']
             }
         except Exception as e:
             log_error(e)

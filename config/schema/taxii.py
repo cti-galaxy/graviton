@@ -216,6 +216,9 @@ class CollectionsModel(BaseModel):
 
 
 class CollectionManifestModel(BaseModel):
+    more: Optional[bool] = Field(description='This property identifies if there is more content available based on'
+                                             ' the search criteria. The absence of this property means the value'
+                                             ' is false.')
     objects: Optional[ManifestRecord] = Field(description='The list of manifest entries for objects returned by the '
                                                           'request. If there are no manifest-record items in the list, '
                                                           'this key is omitted, and the response is an empty '
@@ -223,13 +226,22 @@ class CollectionManifestModel(BaseModel):
 
     class Config:
         schema_extra = {
-            "id": "91a7b528-80eb-42ed-a74d-c6fbd5a26116",
-            "title": "High Value Indicator Collection",
-            "description": "This data collection contains high value IOCs",
-            "can_read": True,
-            "can_write": False,
-            "media_types": [
-                "application/stix+json;version=2.1"
+            "more": True,
+            "objects": [
+                {
+                    "date_added": "2020-05-08T09:00:00.000000Z",
+                    "id": "relationship--2f9a9aa9-108a-4333-83e2-4fb25add0463",
+                    "media_type": "application/stix+json;version=2.1",
+                    "version": "2020-05-08T09:00:00.000Z",
+                    "collection": "91a7b528-80eb-42ed-a74d-c6fbd5a26116"
+                },
+                {
+                    "date_added": "2020-11-01T03:04:05.000000Z",
+                    "id": "indicator--cd981c25-8042-4166-8945-51178443bdac",
+                    "media_type": "application/stix+json;version=2.1",
+                    "version": "2020-05-08T09:00:00.000Z",
+                    "collection": "91a7b528-80eb-42ed-a74d-c6fbd5a26116"
+                }
             ]
         }
 

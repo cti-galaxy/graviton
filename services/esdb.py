@@ -31,88 +31,113 @@ class EsClient:
 
     # Constructor
     def __init__(self,
-                 host=SETTINGS.get('services')['elasticsearch']['host'],
-                 discovery_data=None,
-                 roots_data=None,
-                 collections_data=None,
-                 status_data=None
+                 host: str = SETTINGS.get('services')['elasticsearch']['host'],
+                 discovery_data: dict = None,
+                 roots_data: dict = None,
+                 collections_data: dict = None,
+                 status_data: dict = None
                  ):
-
-        collections = []
-        manifests_data = []
-        objects_data = []
-
         self.client = Elasticsearch(hosts=host)
-
-        if discovery_data is None:
-            discovery_data = self.TAXII_DEFAULT_DISCOVERY
-        if roots_data is None:
-            roots_data = self.TAXII_DEFAULT_ROOTS
-        if status_data is None:
-            status_data = self.TAXXI_DEFAULT_STATUS
-        if collections_data is None:
-            collections_data = self.TAXXI_DEFAULT_COLLECTIONS
-            for collection in collections_data:
-                manifests = collection['_source'].get('manifest')
-                if manifests:
-                    for manifest in manifests:
-                        manifest['_collection'] = collection.get('_id')
-                        manifests_data.append(manifest)
-            for collection in collections_data:
-                objects = collection['_source'].get('objects')
-                if objects:
-                    for object in objects:
-                        object['_collection'] = collection.get('_id')
-                        objects_data.append(object)
-            for collection in collections_data:
-                collection['_source'].pop("manifest", None)
-                collection['_source'].pop("responses", None)
-                collection['_source'].pop("objects", None)
-                collections.append(collection)
-
-        log_info("Checking if ElasticSearch is Up!")
-        if self.client.ping():
-            log_info("ElasticSearch is Up!")
-            log_debug("Loading Data ..")
-            try:
-                # Create Discovery Index and Load Discovery Data
-                if not self.client.indices.exists(discovery_data.get('_index')):
-                    log_info(f"Loading default data in {discovery_data.get('_index')} index...")
-                    self.client.indices.create(index=discovery_data.get('_index'))
-                    helpers.bulk(self.client, [discovery_data])
-                for root in roots_data:
-                    # Create API Roots Index and Load API Roots Data
-                    if not self.client.indices.exists(root.get('_index')):
-                        log_info(f"Loading default data in {root.get('_index')} index...")
-                        self.client.indices.create(index=root.get('_index'))
-                        helpers.bulk(self.client, roots_data)
-                    # Create Status Index and Load Status Data
-                    if not self.client.indices.exists(f"{root.get('_id')}-status"):
-                        log_info(f"Loading default data in status index...")
-                        self.client.indices.create(index=f"{root.get('_id')}-status")
-                        helpers.bulk(self.client, status_data)
-                    # Create Collections Index and Load Collections Data
-                    if not self.client.indices.exists(f"{root.get('_id')}-collections"):
-                        log_info(f"Loading default data in collections index...")
-                        self.client.indices.create(index=f"{root.get('_id')}-collections")
-                        helpers.bulk(self.client, collections)
-                    # Create Manifest Index and Load Manifest Data
-                    if not self.client.indices.exists(f"{root.get('_id')}-manifests"):
-                        log_info(f"Loading manifests data in manifests index...")
-                        self.client.indices.create(index=f"{root.get('_id')}-manifests")
-                        helpers.bulk(self.client, manifests_data)
-                    # Create Objects Index and Load Objects Data
-                    if not self.client.indices.exists(f"{root.get('_id')}-objects"):
-                        log_info(f"Loading objects data in object index...")
-                        self.client.indices.create(index=f"{root.get('_id')}-objects")
-                        helpers.bulk(self.client, objects_data)
-
-            except Exception as e:
-                log_error(e)
-        else:
-            log_error("ElasticSearch is Down!")
+        self.discovery_data = discovery_data
+        self.roots_data = roots_data
+        self.collections_data = collections_data
+        self.status_data = status_data
 
     # Object Methods
+    def is_alive(self):
+        return self.client.ping()
+
+    def es_prep(self):
+        try:
+            collections = []
+            manifests_data = []
+            objects_data = []
+
+            # Prepare Discovery Data
+            if not self.discovery_data:
+                self.discovery_data = self.TAXII_DEFAULT_DISCOVERY
+            if not self.client.indices.exists(self.discovery_data.get('_index')):
+                log_info(f"Loading default data in {self.discovery_data.get('_index')} index...")
+                # Create The Discovery Index
+                self.client.indices.create(index=self.discovery_data.get('_index'))
+                # Load The Discovery Data
+                helpers.bulk(self.client, [self.discovery_data])
+
+            # Prepare API Roots Data
+            if not self.roots_data:
+                self.roots_data = self.TAXII_DEFAULT_ROOTS
+            for root in self.roots_data:
+                if not self.client.indices.exists(root.get('_index')):
+                    log_info(f"Loading default data in {root.get('_index')} index...")
+                    # Create The API Roots Index
+                    self.client.indices.create(index=root.get('_index'))
+                    # Load The API Roots Data
+                    helpers.bulk(self.client, self.roots_data)
+
+            # Prepare Status Data
+            if not self.status_data:
+                self.status_data = self.TAXXI_DEFAULT_STATUS
+            for root in self.roots_data:
+                if not self.client.indices.exists(f"{root.get('_id')}-status"):
+                    log_info(f"Loading default data in status index: {root.get('_id')}-status")
+                    # Create A Status Index Per Root
+                    self.client.indices.create(index=f"{root.get('_id')}-status")
+                    # Load The Status Data
+                    helpers.bulk(self.client, self.status_data )
+
+            if not self.collections_data:
+                self.collections_data = self.TAXXI_DEFAULT_COLLECTIONS
+            for root in self.roots_data:
+                if not self.client.indices.exists(f"{root.get('_id')}-manifest"):
+                    log_info(f"Loading default data in manifest index: {root.get('_id')}-manifest")
+                    # Create A Manifest Index Per Root
+                    self.client.indices.create(index=f"{root.get('_id')}-manifest")
+                    # Load The Manifest Data Per Collection
+                    for collection in self.collections_data:
+                        if root.get('_id') in collection.get('_index'):
+                            manifests = collection['_source'].get('manifest')
+                            if manifests:
+                                for manifest in manifests:
+                                    manifest['collection'] = collection.get('_id')
+                                    manifest_default = {
+                                        "_index": f"{root.get('_id')}-manifest",
+                                        "_id": manifest['id'],
+                                        "_source": manifest
+                                    }
+                                    manifests_data.append(manifest_default)
+                    helpers.bulk(self.client, manifests_data)
+                if not self.client.indices.exists(f"{root.get('_id')}-objects"):
+                    log_info(f"Loading objects data in objects index: {root.get('_id')}-objects")
+                    # Create An Objects Index Per Root
+                    self.client.indices.create(index=f"{root.get('_id')}-objects")
+                    # Load Objects Data Per Collection
+                    for collection in self.collections_data:
+                        if root.get('_id') in collection.get('_index'):
+                            objects = collection['_source'].get('objects')
+                            if objects:
+                                for collection_object in objects:
+                                    collection_object['collection'] = collection.get('_id')
+                                    object_default = {
+                                        "_index": f"{root.get('_id')}-objects",
+                                        "_id": collection_object['id'],
+                                        "_source": collection_object
+                                    }
+                                    objects_data.append(object_default)
+                    helpers.bulk(self.client, objects_data)
+            for root in self.roots_data:
+                if not self.client.indices.exists(f"{root.get('_id')}-collections"):
+                    log_info(f"Loading collections data in collections index: {root.get('_id')}-collections")
+                    # Create A Collections Index Per Root
+                    self.client.indices.create(index=f"{root.get('_id')}-collections")
+                    # Load Collections Per Index
+                    for collection in self.collections_data:
+                        collection['_source'].pop("manifest", None)
+                        collection['_source'].pop("responses", None)
+                        collection['_source'].pop("objects", None)
+                        collections.append(collection)
+                    helpers.bulk(self.client, collections)
+        except Exception as error:
+            log_error(error)
 
     def get_docs(self, index: str):
         try:
@@ -142,20 +167,13 @@ class EsClient:
         except es_exceptions.NotFoundError as e:
             raise e
 
-    def search(self, index: str, query: str = None, fields: str = None,
-               base_page: int = 0, size: int = 100, sort_field: str = None, sort_order: str = None):
+    def search(self, index: str, query: str = None,
+               base_page: int = 0, size: int = 100):
         try:
             query_string = QueryString(query=query)
             search = Search(using=self.client, index=index).query(query_string)[base_page:base_page + size]
-
-            if fields is not None:
-                fields = fields.split(',')
-                search = search.source(fields)
-
-            if sort_field is not None:
-                search = search.sort({sort_field: {'order': sort_order}})
-
             search_results = search.execute().to_dict()
+
             results = []
             for result in search_results['hits']['hits']:
                 response = {}
@@ -164,9 +182,10 @@ class EsClient:
                     'id': result['_id']
                 })
                 results.append(response)
+
             return {
                 "data": results,
-                "total": search_results['hits']['total']['value'],
+                "total": search_results['hits']['total']['value']
             }
         except Exception as e:
             log_error(e)

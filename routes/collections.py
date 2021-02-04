@@ -21,7 +21,7 @@ async def get_collection_manifest(
         api_root: str = Path(..., description='the base URL of the API Root'),
         collection_id: str = Path(..., description='the identifier of the Collection being requested'),
         added_after: Optional[str] = Query(None, description="a single timestamp (e.g., ?added_after=...)"),
-        limit: Optional[str] = Query(None, description='a single timestamp  (e.g., ?limit=...)'),
+        limit: Optional[int] = Query(-1, description='a single timestamp  (e.g., ?limit=...)'),
         next: Optional[str] = Query(None, description='a single string (e.g., ?next=...)'),
         id: Optional[str] = Query(None, description='an id(s) of an object  (e.g., ?match[id]=...)'),
         type: Optional[str] = Query(None, description='the type(s) of an object (e.g., ?match[type]=...)'),
