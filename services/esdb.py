@@ -203,6 +203,8 @@ class EsClient:
                 raise es_exceptions.NotFoundError
         try:
             objects = []
+            manifests = []
+
             # Build the Objects Search Query
             objects_query = f"collection : {query_parameters.get('collection_id')}"
             if types:
@@ -220,40 +222,50 @@ class EsClient:
             # Build the Manifet Search Query
             manifest_query = f"collection : {query_parameters.get('collection_id')}"
             if ids:
-                print (ids.split(','))
                 ids = ids.replace(",", " OR ")
                 manifest_query = manifest_query + f" AND id : ('{ids}')"
             if versions:
-                versions = ids.replace(",", " OR ")
-                manifest_query = manifest_query + f" AND version : ('{versions}')"
-
-            # Execute the Search
+                versions = versions.replace(",", " OR ")
+                manifest_query = manifest_query + f" AND version : '2020-01-20T00:00:00.000Z'"
+                print (manifest_query)
             query_string = QueryString(query=manifest_query, default_operator="and")
+            search = Search(using=self.client, index=f'{index}-manifest').query(query_string)
+            results = search.execute().to_dict()['hits']['hits']
+            for result in results:
+                manifests.append(result['_id'])
 
-            if -1 < size < self.max_page_size:
-                search = Search(using=self.client, index=f'{index}-manifest').query(query_string)[base_page:base_page +
-                                                                                    size]
+            objects_set = set(objects)
+            matched_ids = objects_set.intersection(manifests)
+
+            if matched_ids:
+                # Execute the Search
+
+                matched_ids = ",".join(matched_ids).replace(',', ' OR ')
+                query_string = QueryString(query=f"id:('{matched_ids}')", default_operator="AND")
+
+                if -1 < size < self.max_page_size:
+                    search = Search(using=self.client, index=f'{index}-manifest').query(query_string)[base_page:base_page +
+                                                                                        size]
+                else:
+                    search = Search(using=self.client, index=f'{index}-manifest').query(query_string)[base_page:base_page +
+                                                                                        self.max_page_size]
+                search = search.sort({'date_added': {'order': 'asc'}})
+                search_results = search.execute().to_dict()
+                total = int(search_results['hits']['total']['value'])
+
+                results = []
+                for result in search_results['hits']['hits']:
+                    response = {}
+                    response.update(result['_source'])
+                    response.update({
+                        'id': result['_id']
+                    })
+                    results.append(response)
+                if -1 < size < total or total > self.max_page_size:
+                    more = True
             else:
-                search = Search(using=self.client, index=f'{index}-manifest').query(query_string)[base_page:base_page +
-                                                                                    self.max_page_size]
-            search = search.sort({'date_added': {'order': 'asc'}})
-            search_results = search.execute().to_dict()
-            total = int(search_results['hits']['total']['value'])
-            full_filter = Filter(query_parameters)
+                results = []
 
-            results = []
-            for result in search_results['hits']['hits']:
-                response = {}
-                response.update(result['_source'])
-                response.update({
-                    'id': result['_id']
-                })
-                results.append(response)
-
-
-
-            if -1 < size < total or total > self.max_page_size:
-                more = True
             return {
                 "more": more,
                 "objects": results,
