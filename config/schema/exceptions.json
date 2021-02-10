@@ -50,7 +50,13 @@
     "ManifestNotFoundException": {
         "title": "The API Root or Collection ID are not found, or the client does not have access to the manifest resource",
         "description": "No Collections Found Under This Route",
-        "error_id": "C:02",
+        "error_id": "C:03",
         "error_code": "404"
+    },
+    "NextNotFoundException": {
+        "title": "The server did not understand the request or filter parameters: 'next' not valid",
+        "description": "Check the filter parameters",
+        "error_id": "C:04",
+        "error_code": "400"
     }
 }

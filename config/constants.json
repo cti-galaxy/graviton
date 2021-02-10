@@ -3,5 +3,6 @@
     "accept": "application/taxii+json;version=2.1",
     "mimetype": "application/taxii+json;version=2.1"
   },
-  "origins": ["http://localhost:3000"]
+  "origins": ["http://localhost:3000"],
+  "maximum_page_size": 10
 }

@@ -44,6 +44,12 @@ class Helper:
         return datetime.datetime.now(tz=pytz.UTC)
 
     @classmethod
+    def skip_special_characters(cls, string):
+        """Get current time with UTC offset"""
+        return string.replace('-', '\\-')
+
+
+    @classmethod
     def datetime_to_string(cls, dttm):
         """Given a datetime instance, produce the string representation
         with microsecond precision"""
@@ -508,7 +514,7 @@ class Pagination:
         self.next[u] = d
         return u
 
-    def get_next(self, filter_args, allowed, manifest, lim):
+    def get_next(self, filter_args, manifest, lim):
         n = filter_args["next"]
         if n in self.next:
             for arg in filter_args:

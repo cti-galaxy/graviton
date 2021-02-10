@@ -3,8 +3,6 @@ from middleware.logging import log_debug, log_info, log_error
 from services.esdb import EsClient
 from elasticsearch.exceptions import NotFoundError
 
-from .common import Helper
-
 EXCEPTIONS: dict = json.load(open('config/schema/exceptions.json', encoding="utf8"))
 
 
@@ -36,49 +34,21 @@ class Collections(object):
         except Exception as e:
             log_error(e)
             return EXCEPTIONS.get('CollectionNotFoundException', {})
-    """
-    @classmethod
-    def get_collection_manifest(cls, api_root, collection_id, **query_parameters):
-        if query_parameters.get('added_after'):
-            print ('test')
-        log_debug(f'Request to Get The objects Manifest of Collection: {collection_id} in the Feed Root: {api_root}')
-        try:
-            result = cls.es_client.get_doc(index=f'{api_root}-collections', doc_id=collection_id)['data']['manifest']
-            return {
-                'objects': result
-            }
-        except Exception as e:
-            log_error(e)
-            return EXCEPTIONS.get('CollectionNotFoundException', {})
-    """
 
     @classmethod
     def get_collection_manifest(cls, api_root, **query_parameters):
         log_debug(f"Request to Get The objects Manifest of Collection: {query_parameters.get('collection_id')} "
                   f"in the Feed Root: {api_root}")
-        more = False
         try:
-            query = f"collection = {query_parameters.get('collection_id')}"
-            if query_parameters.get('id'):
-                query = query + f", id = {query_parameters.get('id')}"
-            if int(query_parameters.get('limit')) > -1:
-                result = cls.es_client.search(index=f'{api_root}-manifest',
-                                              query=query,
-                                              size=int(query_parameters.get('limit')))
-            else:
-                result = cls.es_client.search(index=f'{api_root}-manifest',
-                                              query=query)
-
-            if int(result['total']) > int(query_parameters.get('limit')):
-                more = True
-
-            return {
-                'more': more,
-                'objects': result['data']
-            }
+            results = cls.es_client.search_manifests(index=api_root,
+                                                     query_parameters=query_parameters)
+            return results
         except Exception as e:
             log_error(e)
-            return EXCEPTIONS.get('CollectionNotFoundException', {})
+            if query_parameters.get('next'):
+                return EXCEPTIONS.get('NextNotFoundException', {})
+            else:
+                return EXCEPTIONS.get('CollectionNotFoundException', {})
 
     @classmethod
     def post_objects(cls, cti_objects):

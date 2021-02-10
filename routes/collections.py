@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query, Path
+from fastapi import APIRouter, Query, Path, Request
 from fastapi.responses import JSONResponse
 from typing import Optional
 
@@ -18,15 +18,12 @@ router = APIRouter()
             summary="Get manifest information about the contents of a specific collection.",
             tags=["Collections"])
 async def get_collection_manifest(
+        request: Request,
         api_root: str = Path(..., description='the base URL of the API Root'),
         collection_id: str = Path(..., description='the identifier of the Collection being requested'),
         added_after: Optional[str] = Query(None, description="a single timestamp (e.g., ?added_after=...)"),
         limit: Optional[int] = Query(-1, description='a single timestamp  (e.g., ?limit=...)'),
-        next: Optional[str] = Query(None, description='a single string (e.g., ?next=...)'),
-        id: Optional[str] = Query(None, description='an id(s) of an object  (e.g., ?match[id]=...)'),
-        type: Optional[str] = Query(None, description='the type(s) of an object (e.g., ?match[type]=...)'),
-        version: Optional[str] = Query(None, description='the version(s) of an object (e.g., ?match[version]=...)'),
-        spec_version: Optional[str] = Query(None, description='the specification version(s) (e.g., ?match[version]=...)')
+        next: Optional[str] = Query(None, description='a single string (e.g., ?next=...)')
 ):
     """
     Defines TAXII API - Collections:
@@ -45,10 +42,10 @@ async def get_collection_manifest(
         added_after=added_after,
         limit=limit,
         next=next,
-        id=id,
-        type=type,
-        version=version,
-        spec_version=spec_version
+        ids=request.query_params.get('match[id]'),
+        types=request.query_params.get('match[type]'),
+        versions=request.query_params.get('match[version]'),
+        spec_versions=request.query_params.get('match[spec_version]')
     )
     if response.get('error_code'):
         return JSONResponse(status_code=int(response.get('error_code')), content=response)

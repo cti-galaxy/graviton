@@ -4,7 +4,7 @@ from elasticsearch import Elasticsearch, helpers
 from elasticsearch import exceptions as es_exceptions
 from elasticsearch_dsl import Search
 from elasticsearch_dsl.query import QueryString
-
+from .common import Helper, Filter, Pagination
 from middleware.logging import log_debug, log_info, log_error
 
 
@@ -13,6 +13,12 @@ class EsClient:
     # Class Attributes
     default_settings = json.load(open('config/settings.json', encoding="utf8"))
     SETTINGS = json.load(open('config/settings.json', encoding="utf8"))
+
+    if json.load(open('config/constants.json', encoding="utf8")).get('maximum_page_size'):
+        PAGE_SIZE: int = int(json.load(open('config/constants.json', encoding="utf8")).get('maximum_page_size'))
+    else:
+        PAGE_SIZE: int = 10
+
     TAXII_DEFAULT_DISCOVERY = json.load(open('config/defaults/data/discovery.json', encoding="utf8"))
     TAXII_DEFAULT_ROOTS = [
         json.load(open('config/defaults/data/roots-feed1.json', encoding="utf8")),
@@ -42,6 +48,7 @@ class EsClient:
         self.roots_data = roots_data
         self.collections_data = collections_data
         self.status_data = status_data
+        self.max_page_size = self.PAGE_SIZE
 
     # Object Methods
     def is_alive(self):
@@ -85,6 +92,7 @@ class EsClient:
                     # Load The Status Data
                     helpers.bulk(self.client, self.status_data )
 
+            # Prepare Collections Data
             if not self.collections_data:
                 self.collections_data = self.TAXXI_DEFAULT_COLLECTIONS
             for root in self.roots_data:
@@ -136,6 +144,14 @@ class EsClient:
                         collection['_source'].pop("objects", None)
                         collections.append(collection)
                     helpers.bulk(self.client, collections)
+
+            # Create Next Index
+
+            if not self.client.indices.exists('next'):
+                log_info(f"Creating Next index...")
+                # Create The API Roots Index
+                self.client.indices.create('next')
+
         except Exception as error:
             log_error(error)
 
@@ -167,12 +183,63 @@ class EsClient:
         except es_exceptions.NotFoundError as e:
             raise e
 
-    def search(self, index: str, query: str = None,
-               base_page: int = 0, size: int = 100):
+    def search_manifests(self, index: str, query_parameters: dict = None):
+        size = int(query_parameters.get('limit'))
+        added_after = query_parameters.get('added_after')
+        types = query_parameters.get('types')
+        ids = query_parameters.get('ids')
+        versions = query_parameters.get('versions')
+        spec_versions = query_parameters.get('spec_versions')
+        base_page = 0
+        more = False
+        next_id = 0
+
+        if query_parameters is None:
+            query_parameters = {}
+
+        if query_parameters.get('next'):
+            next_objects = self.client.get(index='next', id=query_parameters.get('next'))
+            if not next_objects:
+                raise es_exceptions.NotFoundError
         try:
-            query_string = QueryString(query=query)
-            search = Search(using=self.client, index=index).query(query_string)[base_page:base_page + size]
+            objects = []
+            # Build the Objects Search Query
+            objects_query = f"collection : {query_parameters.get('collection_id')}"
+            if types:
+                types = types.replace(",", " OR ")
+                objects_query = objects_query + f" AND type : ('{types}')"
+            if spec_versions:
+                spec_versions = spec_versions.replace(",", " OR ")
+                objects_query = objects_query + f" AND spec_version : ('{spec_versions}')"
+            query_string = QueryString(query=objects_query, default_operator="and")
+            search = Search(using=self.client, index=f'{index}-objects').query(query_string)
+            results = search.execute().to_dict()['hits']['hits']
+            for result in results:
+                objects.append(result['_id'])
+
+            # Build the Manifet Search Query
+            manifest_query = f"collection : {query_parameters.get('collection_id')}"
+            if ids:
+                print (ids.split(','))
+                ids = ids.replace(",", " OR ")
+                manifest_query = manifest_query + f" AND id : ('{ids}')"
+            if versions:
+                versions = ids.replace(",", " OR ")
+                manifest_query = manifest_query + f" AND version : ('{versions}')"
+
+            # Execute the Search
+            query_string = QueryString(query=manifest_query, default_operator="and")
+
+            if -1 < size < self.max_page_size:
+                search = Search(using=self.client, index=f'{index}-manifest').query(query_string)[base_page:base_page +
+                                                                                    size]
+            else:
+                search = Search(using=self.client, index=f'{index}-manifest').query(query_string)[base_page:base_page +
+                                                                                    self.max_page_size]
+            search = search.sort({'date_added': {'order': 'asc'}})
             search_results = search.execute().to_dict()
+            total = int(search_results['hits']['total']['value'])
+            full_filter = Filter(query_parameters)
 
             results = []
             for result in search_results['hits']['hits']:
@@ -183,9 +250,13 @@ class EsClient:
                 })
                 results.append(response)
 
+
+
+            if -1 < size < total or total > self.max_page_size:
+                more = True
             return {
-                "data": results,
-                "total": search_results['hits']['total']['value']
+                "more": more,
+                "objects": results,
             }
         except Exception as e:
             log_error(e)
