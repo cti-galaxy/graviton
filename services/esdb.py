@@ -6,14 +6,21 @@ from elasticsearch_dsl import Search
 from elasticsearch_dsl.query import QueryString
 from .common import Helper, Filter, Pagination
 from middleware.logging import log_debug, log_info, log_error
+from os import environ, path
+from dotenv import load_dotenv
+import urllib3
+
+urllib3.disable_warnings()
+basedir = path.abspath(path.dirname(__file__))
+load_dotenv(path.join(basedir, '.env'))
 
 
 class EsClient:
 
     # Class Attributes
-    default_settings = json.load(open('config/settings.json', encoding="utf8"))
     SETTINGS = json.load(open('config/settings.json', encoding="utf8"))
-
+    USERNAME = 'elastic'
+    PASSWORD = environ.get('ELASTIC_PASSWORD')
     if json.load(open('config/constants.json', encoding="utf8")).get('maximum_page_size'):
         PAGE_SIZE: int = int(json.load(open('config/constants.json', encoding="utf8")).get('maximum_page_size'))
     else:
@@ -38,12 +45,18 @@ class EsClient:
     # Constructor
     def __init__(self,
                  host: str = SETTINGS.get('services')['elasticsearch']['host'],
+                 port: str = SETTINGS.get('services')['elasticsearch']['port'],
+                 scheme: str = SETTINGS.get('services')['elasticsearch']['scheme'],
+                 username: str = USERNAME,
+                 password: str = PASSWORD,
                  discovery_data: dict = None,
                  roots_data: dict = None,
                  collections_data: dict = None,
-                 status_data: dict = None
+                 status_data: dict = None,
+                 verify_certs: bool = bool(SETTINGS.get('services')['elasticsearch']['verify_certs']) or False
                  ):
-        self.client = Elasticsearch(hosts=host)
+        self.client = Elasticsearch([host], http_auth=(username, password), scheme=scheme, port=port,
+                                    verify_certs=verify_certs)
         self.discovery_data = discovery_data
         self.roots_data = roots_data
         self.collections_data = collections_data

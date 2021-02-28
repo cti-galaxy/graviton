@@ -2,8 +2,10 @@
   "version": "1.0",
   "services": {
     "elasticsearch": {
-      "host": "elasticsearch",
-      "port": "9200"
+      "host": "192.168.20.210",
+      "port": "9200",
+      "scheme": "https",
+      "verify_certs": false
     }
   }
 }
