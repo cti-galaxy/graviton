@@ -8,3 +8,5 @@ requests~=2.25.1
 urllib3~=1.26.2
 python-multipart
 pytz~=2021.1
+elasticsearch-dsl~=7.0.0
+python-dotenv~=0.15.0
