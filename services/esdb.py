@@ -218,7 +218,7 @@ class EsClient:
             objects = []
             manifests = []
 
-            # Build the Objects Search Query
+            # Query Objects by collection id, types and spec_versions
             objects_query = f"collection : {query_parameters.get('collection_id')}"
             if types:
                 types = types.replace(",", " OR ")
@@ -232,7 +232,7 @@ class EsClient:
             for result in results:
                 objects.append(result['_id'])
 
-            # Build the Manifet Search Query
+            # Query Manifests by collection id, object id and versions
             manifest_query = f"collection : {query_parameters.get('collection_id')}"
             if ids:
                 ids = ids.replace(",", " OR ")
@@ -247,11 +247,12 @@ class EsClient:
             for result in results:
                 manifests.append(result['_id'])
 
+            # Intersect the results of Object and Minfest queries and output a list of object id's
             objects_set = set(objects)
             matched_ids = objects_set.intersection(manifests)
 
             if matched_ids:
-                # Execute the Search
+                # Execute the manifest Search
 
                 matched_ids = ",".join(matched_ids).replace(',', ' OR ')
                 query_string = QueryString(query=f"id:('{matched_ids}')", default_operator="AND")
