@@ -3,8 +3,7 @@ import json
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch import exceptions as es_exceptions
 from elasticsearch_dsl import Search
-from elasticsearch_dsl.query import QueryString
-from .common import Helper, Filter, Pagination
+from elasticsearch_dsl.query import QueryString, Range
 from middleware.logging import log_debug, log_info, log_error
 from os import environ, path
 from dotenv import load_dotenv
@@ -21,10 +20,7 @@ class EsClient:
     SETTINGS = json.load(open('config/settings.json', encoding="utf8"))
     USERNAME = 'elastic'
     PASSWORD = environ.get('ELASTIC_PASSWORD')
-    if json.load(open('config/constants.json', encoding="utf8")).get('maximum_page_size'):
-        PAGE_SIZE: int = int(json.load(open('config/constants.json', encoding="utf8")).get('maximum_page_size'))
-    else:
-        PAGE_SIZE: int = 10
+
 
     TAXII_DEFAULT_DISCOVERY = json.load(open('config/defaults/data/discovery.json', encoding="utf8"))
     TAXII_DEFAULT_ROOTS = [
@@ -61,7 +57,6 @@ class EsClient:
         self.roots_data = roots_data
         self.collections_data = collections_data
         self.status_data = status_data
-        self.max_page_size = self.PAGE_SIZE
 
     # Object Methods
     def is_alive(self):
@@ -287,6 +282,72 @@ class EsClient:
         except Exception as e:
             log_error(e)
             raise
+
+    def scan(self, index: str, query_string: QueryString, sort_by: dict = None, fields: list = None):
+        results = []
+        search = Search(using=self.client, index=index).query(query_string).source(fields)
+        scan_results = search.scan()
+
+        for result in scan_results:
+            results.append(result.to_dict())
+        return {
+            "more": False,
+            "objects": results,
+        }
+
+    def search(self, index: str, query_string: QueryString, search_from: int, size: int,
+               sort_by: dict = None, fields: list = None):
+        results = []
+        more = False
+        search = Search(using=self.client, index=index).query(query_string).source(fields)[search_from:size]
+        search = search.sort(sort_by)
+        search_results = search.execute().to_dict()
+        total = int(search_results['hits']['total']['value'])
+
+        for result in search_results['hits']['hits']:
+            response = {}
+            response.update(result['_source'])
+            response.update({
+                'id': result['_id']
+            })
+            results.append(response)
+
+        if -1 < size < total :
+            more = True
+
+        return {
+            "more": more,
+            "objects": results,
+        }
+
+    def intersect(self, intersect_by: str,
+                  first_index: str, first_query_string: QueryString,
+                  second_index: str, second_query_string: QueryString,
+                  first_query_by_date: Range = None, second_query_by_date: Range = None
+                  ):
+        first_results = []
+        if first_query_by_date:
+            search = Search(using=self.client, index=first_index).query(first_query_string)\
+                .query(first_query_by_date).source(intersect_by)
+        else:
+            search = Search(using=self.client, index=first_index).query(first_query_string).source(intersect_by)
+        first_scan_results = search.scan()
+        for result in first_scan_results:
+            first_results.append(result.to_dict()[intersect_by])
+
+        second_results = []
+        if second_query_by_date:
+            search = Search(using=self.client, index=second_index).query(second_query_string).\
+                query(second_query_by_date).source(intersect_by)
+        else:
+            search = Search(using=self.client, index=second_index).query(second_query_string).source(intersect_by)
+        second_scan_results = search.scan()
+        for result in second_scan_results:
+            second_results.append(result.to_dict()[intersect_by])
+
+        first_results_set = set(first_results)
+        intersections = first_results_set.intersection(second_results)
+        return intersections
 
     def store_doc(self, index: str, data: object,  doc_id=int(round(time.time() * 1000))):
         try:

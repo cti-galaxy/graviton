@@ -48,7 +48,6 @@ class Helper:
         """Get current time with UTC offset"""
         return string.replace('-', '\\-')
 
-
     @classmethod
     def datetime_to_string(cls, dttm):
         """Given a datetime instance, produce the string representation
