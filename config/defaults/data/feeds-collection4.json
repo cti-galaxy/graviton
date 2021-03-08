@@ -132,6 +132,12 @@
             "version": "2020-05-08T09:00:00.000Z"
         },
         {
+            "date_added": "2020-11-01T03:04:05.000000Z",
+            "id": "indicator--cd981c25-8042-4166-8945-51178443bdac",
+            "media_type": "application/stix+json;version=2.1",
+            "version": "2020-05-06T09:00:00.000Z"
+        },
+        {
             "date_added": "2020-11-03T12:30:59.001000Z",
             "id": "indicator--6770298f-0fd8-471a-ab8c-1c658a46574e",
             "media_type": "application/stix+json;version=2.1",

@@ -117,7 +117,6 @@ class EsClient:
                                     manifest['collection'] = collection.get('_id')
                                     manifest_default = {
                                         "_index": f"{root.get('_id')}-manifest",
-                                        "_id": manifest['id'],
                                         "_source": manifest
                                     }
                                     manifests_data.append(manifest_default)
@@ -135,7 +134,6 @@ class EsClient:
                                     collection_object['collection'] = collection.get('_id')
                                     object_default = {
                                         "_index": f"{root.get('_id')}-objects",
-                                        "_id": collection_object['id'],
                                         "_source": collection_object
                                     }
                                     objects_data.append(object_default)
@@ -165,13 +163,13 @@ class EsClient:
 
     def get_docs(self, index: str):
         try:
-            res = self.client.search(index=index, size=10, sort='_id')
+            res = self.client.search(index=index, size=10, sort='id')
             results = []
             for result in res['hits']['hits']:
                 response = {}
                 response.update(result['_source'])
                 response.update({
-                    'id': result['_id']
+                    'id': result['id']
                 })
                 results.append(response)
             return {
@@ -225,7 +223,7 @@ class EsClient:
             search = Search(using=self.client, index=f'{index}-objects').query(query_string)
             results = search.execute().to_dict()['hits']['hits']
             for result in results:
-                objects.append(result['_id'])
+                objects.append(result['id'])
 
             # Query Manifests by collection id, object id and versions
             manifest_query = f"collection : {query_parameters.get('collection_id')}"
@@ -235,12 +233,11 @@ class EsClient:
             if versions:
                 versions = versions.replace(",", " OR ")
                 manifest_query = manifest_query + f" AND version : '2020-01-20T00:00:00.000Z'"
-                print (manifest_query)
             query_string = QueryString(query=manifest_query, default_operator="and")
             search = Search(using=self.client, index=f'{index}-manifest').query(query_string)
             results = search.execute().to_dict()['hits']['hits']
             for result in results:
-                manifests.append(result['_id'])
+                manifests.append(result['id'])
 
             # Intersect the results of Object and Minfest queries and output a list of object id's
             objects_set = set(objects)
@@ -266,9 +263,7 @@ class EsClient:
                 for result in search_results['hits']['hits']:
                     response = {}
                     response.update(result['_source'])
-                    response.update({
-                        'id': result['_id']
-                    })
+
                     results.append(response)
                 if -1 < size < total or total > self.max_page_size:
                     more = True
@@ -320,33 +315,30 @@ class EsClient:
             "objects": results,
         }
 
-    def intersect(self, intersect_by: str,
-                  first_index: str, first_query_string: QueryString,
-                  second_index: str, second_query_string: QueryString,
-                  first_query_by_date: Range = None, second_query_by_date: Range = None
-                  ):
-        first_results = []
-        if first_query_by_date:
-            search = Search(using=self.client, index=first_index).query(first_query_string)\
-                .query(first_query_by_date).source(intersect_by)
-        else:
-            search = Search(using=self.client, index=first_index).query(first_query_string).source(intersect_by)
-        first_scan_results = search.scan()
-        for result in first_scan_results:
-            first_results.append(result.to_dict()[intersect_by])
+    def manifest_intersect(self, intersect_by: str,
+                           objects_index: str, objects_query_string: QueryString,
+                           manifests_index: str, manifests_query_string: QueryString,
+                           version_range: Range = None, added_after_range: Range = None
+                           ):
+        objects_results = []
+        objects_search = Search(using=self.client, index=objects_index).query(objects_query_string).source(intersect_by)
+        objects_scan_results = objects_search.scan()
+        for result in objects_scan_results:
+            objects_results.append(result.to_dict()[intersect_by])
 
-        second_results = []
-        if second_query_by_date:
-            search = Search(using=self.client, index=second_index).query(second_query_string).\
-                query(second_query_by_date).source(intersect_by)
-        else:
-            search = Search(using=self.client, index=second_index).query(second_query_string).source(intersect_by)
-        second_scan_results = search.scan()
-        for result in second_scan_results:
-            second_results.append(result.to_dict()[intersect_by])
+        manifests_results = []
+        manifests_search = Search(using=self.client, index=manifests_index).query(manifests_query_string)\
+            .source(intersect_by)
+        if version_range:
+            manifests_search = manifests_search.query(version_range)
+        if added_after_range:
+            manifests_search = manifests_search.query(added_after_range)
+        manifests_scan_results = manifests_search.scan()
+        for result in manifests_scan_results:
+            manifests_results.append(result.to_dict()[intersect_by])
 
-        first_results_set = set(first_results)
-        intersections = first_results_set.intersection(second_results)
+        objects_results_set = set(objects_results)
+        intersections = objects_results_set.intersection(manifests_results)
         return intersections
 
     def store_doc(self, index: str, data: object,  doc_id=int(round(time.time() * 1000))):

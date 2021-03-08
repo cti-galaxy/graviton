@@ -2,7 +2,7 @@ import json
 from middleware.logging import log_debug, log_info, log_error
 from services.esdb import EsClient
 from elasticsearch.exceptions import NotFoundError
-from elasticsearch_dsl.query import QueryString, Range
+from elasticsearch_dsl.query import QueryString, Range, Terms
 from common import Helper
 
 EXCEPTIONS: dict = json.load(open('config/schema/exceptions.json', encoding="utf8"))
@@ -44,8 +44,10 @@ class Collections(object):
 
     @classmethod
     def get_collection_manifest(cls, api_root, **query_parameters):
-        log_debug(f"Request to Get The objects Manifest of Collection: {query_parameters.get('collection_id')} "
-                  f"in the Feed Root: {api_root}")
+        objects_query = None
+        manifest_query = None
+        version_range = None
+        added_after_range = None
         size = int(query_parameters.get('limit'))
         max_page_size = PAGE_SIZE
         added_after = query_parameters.get('added_after')
@@ -56,12 +58,19 @@ class Collections(object):
         spec_versions = query_parameters.get('spec_versions')
         base_page = 0
         next_id = 0
+        objects_query = None
+        manifest_query = None
+        version_range = None
+        added_after_range = None
+
+        log_debug(f"Request to Get The objects Manifest of Collection: {query_parameters.get('collection_id')} "
+                  f"in the Feed Root: {api_root}")
 
         if query_parameters is None:
             query_parameters = {}
 
         try:
-            # Query Objects by collection id, types and spec_versions
+            # Create a Query to filter Objects by collection id, types and spec_versions
             objects_query = f"collection : {query_parameters.get('collection_id')}"
             if types:
                 types = types.replace(",", " OR ")
@@ -71,27 +80,30 @@ class Collections(object):
                 objects_query = objects_query + f" AND spec_version : ('{spec_versions}')"
             objects_query_string = QueryString(query=objects_query, default_operator="and")
 
-            # Query Manifest by collection id, types and spec_versions
+            # Create a Query to filter Manifest by collection id, object id's, versions and added after dates
             manifest_query = f"collection : {query_parameters.get('collection_id')}"
             if ids:
                 ids = ids.replace(",", " OR ")
                 manifest_query = manifest_query + f" AND id : ('{ids}')"
             if versions:
-                versions = versions.replace(",", " OR ")
-                manifest_query = manifest_query + f" AND version : ('{versions}')"
-            manifests_query_string = QueryString(query=manifest_query, default_operator="and")
+                if "all" in versions:
+                    version_range = None
+                else:
+                    versions = versions.split(",")
+                    version_range = Terms(**{'version': versions})
             if added_after:
-                manifests_query_by_date = Range(**{'date_added': {'gte': f'{added_after}'}})
-            else:
-                manifests_query_by_date = None
+                added_after_range = Range(**{'date_added': {'gt': f'{added_after}'}})
+            manifests_query_string = QueryString(query=manifest_query, default_operator="and")
 
-            intersected_results = cls.es_client.intersect(
+            # Get the intersect of both Objects and Manifest Queries
+            intersected_results = cls.es_client.manifest_intersect(
                 intersect_by='id',
-                first_index=f'{api_root}-objects', first_query_string=objects_query_string,
-                second_index=f'{api_root}-manifest', second_query_string=manifests_query_string,
-                second_query_by_date=manifests_query_by_date
+                objects_index=f'{api_root}-objects', objects_query_string=objects_query_string,
+                manifests_index=f'{api_root}-manifest', manifests_query_string=manifests_query_string,
+                version_range=version_range, added_after_range=added_after_range
             )
 
+            # Paginate The Results
             if intersected_results:
                 manifest_ids = ",".join(intersected_results).replace(',', ' OR ')
                 query_string = QueryString(query=f"id:('{manifest_ids}')", default_operator="AND")
