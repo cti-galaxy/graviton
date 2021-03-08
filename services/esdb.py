@@ -189,95 +189,6 @@ class EsClient:
         except es_exceptions.NotFoundError as e:
             raise e
 
-    def search_manifests(self, index: str, query_parameters: dict = None):
-        size = int(query_parameters.get('limit'))
-        added_after = query_parameters.get('added_after')
-        types = query_parameters.get('types')
-        ids = query_parameters.get('ids')
-        versions = query_parameters.get('versions')
-        spec_versions = query_parameters.get('spec_versions')
-        base_page = 0
-        more = False
-        next_id = 0
-
-        if query_parameters is None:
-            query_parameters = {}
-
-        if query_parameters.get('next'):
-            next_objects = self.client.get(index='next', id=query_parameters.get('next'))
-            if not next_objects:
-                raise es_exceptions.NotFoundError
-        try:
-            objects = []
-            manifests = []
-
-            # Query Objects by collection id, types and spec_versions
-            objects_query = f"collection : {query_parameters.get('collection_id')}"
-            if types:
-                types = types.replace(",", " OR ")
-                objects_query = objects_query + f" AND type : ('{types}')"
-            if spec_versions:
-                spec_versions = spec_versions.replace(",", " OR ")
-                objects_query = objects_query + f" AND spec_version : ('{spec_versions}')"
-            query_string = QueryString(query=objects_query, default_operator="and")
-            search = Search(using=self.client, index=f'{index}-objects').query(query_string)
-            results = search.execute().to_dict()['hits']['hits']
-            for result in results:
-                objects.append(result['id'])
-
-            # Query Manifests by collection id, object id and versions
-            manifest_query = f"collection : {query_parameters.get('collection_id')}"
-            if ids:
-                ids = ids.replace(",", " OR ")
-                manifest_query = manifest_query + f" AND id : ('{ids}')"
-            if versions:
-                versions = versions.replace(",", " OR ")
-                manifest_query = manifest_query + f" AND version : '2020-01-20T00:00:00.000Z'"
-            query_string = QueryString(query=manifest_query, default_operator="and")
-            search = Search(using=self.client, index=f'{index}-manifest').query(query_string)
-            results = search.execute().to_dict()['hits']['hits']
-            for result in results:
-                manifests.append(result['id'])
-
-            # Intersect the results of Object and Minfest queries and output a list of object id's
-            objects_set = set(objects)
-            matched_ids = objects_set.intersection(manifests)
-
-            if matched_ids:
-                # Execute the manifest Search
-
-                matched_ids = ",".join(matched_ids).replace(',', ' OR ')
-                query_string = QueryString(query=f"id:('{matched_ids}')", default_operator="AND")
-
-                if -1 < size < self.max_page_size:
-                    search = Search(using=self.client, index=f'{index}-manifest').query(query_string)[base_page:base_page +
-                                                                                        size]
-                else:
-                    search = Search(using=self.client, index=f'{index}-manifest').query(query_string)[base_page:base_page +
-                                                                                        self.max_page_size]
-                search = search.sort({'date_added': {'order': 'asc'}})
-                search_results = search.execute().to_dict()
-                total = int(search_results['hits']['total']['value'])
-
-                results = []
-                for result in search_results['hits']['hits']:
-                    response = {}
-                    response.update(result['_source'])
-
-                    results.append(response)
-                if -1 < size < total or total > self.max_page_size:
-                    more = True
-            else:
-                results = []
-
-            return {
-                "more": more,
-                "objects": results,
-            }
-        except Exception as e:
-            log_error(e)
-            raise
-
     def scan(self, index: str, query_string: QueryString, sort_by: dict = None, fields: list = None):
         results = []
         search = Search(using=self.client, index=index).query(query_string).source(fields)
@@ -302,9 +213,6 @@ class EsClient:
         for result in search_results['hits']['hits']:
             response = {}
             response.update(result['_source'])
-            response.update({
-                'id': result['_id']
-            })
             results.append(response)
 
         if -1 < size < total :

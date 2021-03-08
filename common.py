@@ -10,6 +10,17 @@ import calendar
 class Helper:
 
     @classmethod
+    def match_version(cls, stix_data, versions):
+        if versions:
+            if "all" in versions:
+                version_range = None
+            else:
+                versions = versions.split(",")
+                version_range = Terms(**{'version': versions})
+        else:
+            version_range = Range(**{'version': {'gt': 'gt'}})
+
+    @classmethod
     def paginate(cls, pages_name, items, more=False, next_id=None):
         pages = {}
         if items:

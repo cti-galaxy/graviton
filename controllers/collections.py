@@ -85,12 +85,6 @@ class Collections(object):
             if ids:
                 ids = ids.replace(",", " OR ")
                 manifest_query = manifest_query + f" AND id : ('{ids}')"
-            if versions:
-                if "all" in versions:
-                    version_range = None
-                else:
-                    versions = versions.split(",")
-                    version_range = Terms(**{'version': versions})
             if added_after:
                 added_after_range = Range(**{'date_added': {'gt': f'{added_after}'}})
             manifests_query_string = QueryString(query=manifest_query, default_operator="and")
@@ -103,11 +97,12 @@ class Collections(object):
                 version_range=version_range, added_after_range=added_after_range
             )
 
-            # Paginate The Results
+            # Version and Paginate The Results
             if intersected_results:
                 manifest_ids = ",".join(intersected_results).replace(',', ' OR ')
                 query_string = QueryString(query=f"id:('{manifest_ids}')", default_operator="AND")
-
+                pre_versioning_results = cls.es_client.scan(index=f'{api_root}-manifest', query_string=query_string)
+                pre_pagination_results = Helper.match_version(stix_data=pre_versioning_results,versions=versions)
                 if -1 < size < max_page_size:
                     results = cls.es_client.search(index=f'{api_root}-manifest', query_string=query_string,
                                                    search_from=base_page, size=size, sort_by=sort_by)
