@@ -5,20 +5,102 @@ import uuid
 import operator
 import pytz
 import calendar
+from elasticsearch_dsl.query import Range, Terms
+
+
+def string_to_datetime(timestamp):
+    try:
+        return datetime.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
+    except ValueError:
+        return datetime.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ")
+
+
+def get_version_field(stix_object):
+    if "version" in stix_object:
+        return stix_object["version"]
+    elif "modified" in stix_object:
+        return stix_object["modified"]
+    elif "created" in stix_object:
+        return stix_object["created"]
+    else:
+        return stix_object["date_added"]
+
+
+def locate_version(stix_objects, locator):
+    object_ids = []
+    processed_objects = []
+    for stix_object in stix_objects:
+        position = bisect.bisect_left(object_ids, stix_object["id"])
+        if not processed_objects or position >= len(object_ids) or object_ids[position] != stix_object["id"]:
+            object_ids.insert(position, stix_object["id"])
+            processed_objects.insert(position, stix_object)
+        else:
+            if locator(get_version_field(stix_object), get_version_field(processed_objects[position])):
+                processed_objects[position] = stix_object
+    return processed_objects
+
+
+def check_for_dupes(final_objects, final_ids, matched_objects):
+    for stix_object in matched_objects:
+        found = 0
+        position = bisect.bisect_left(final_ids, stix_object["id"])
+        if not final_objects or position > len(final_ids) - 1 or final_ids[position] != stix_object["id"]:
+            final_ids.insert(position, stix_object["id"])
+            final_objects.insert(position, stix_object)
+        else:
+            stix_object_time = get_version_field(stix_object)
+            while position != len(final_ids) and stix_object["id"] == final_ids[position]:
+                if get_version_field(final_objects[position]) == stix_object_time:
+                    found = 1
+                    break
+                else:
+                    position = position + 1
+            if found == 1:
+                continue
+            else:
+                final_ids.insert(position, stix_object["id"])
+                final_objects.insert(position, stix_object)
 
 
 class Helper:
 
     @classmethod
-    def match_version(cls, stix_data, versions):
-        if versions:
-            if "all" in versions:
-                version_range = None
-            else:
-                versions = versions.split(",")
-                version_range = Terms(**{'version': versions})
-        else:
-            version_range = Range(**{'version': {'gt': 'gt'}})
+    def fetch_objects_by_versions(cls, stix_objects, versions):
+        final_objects = []
+        final_ids = []
+
+        if versions is None:
+            versions = "last"
+        if "all" in versions:
+            return stix_objects
+
+        versions = versions.split(",")
+        specific_versions = []
+        for version in versions:
+            if version is not 'first' and version is not 'last':
+                specific_versions.append(version)
+
+        if specific_versions:
+            object_ids = []
+            matched_objects = []
+            for stix_object in stix_objects:
+                stix_object_version = get_version_field(stix_object)
+                if stix_object_version in specific_versions:
+                    position = bisect.bisect_left(object_ids, stix_object["id"])
+                    object_ids.insert(position, stix_object["id"])
+                    matched_objects.insert(position, stix_object)
+            final_ids = object_ids
+            final_objects = matched_objects
+
+        if "first" in versions:
+            matched_objects = locate_version(stix_objects, operator.lt)
+            check_for_dupes(final_objects, final_ids, matched_objects)
+
+        if "last" in versions:
+            matched_objects = locate_version(stix_objects, operator.gt)
+            check_for_dupes(final_objects, final_ids, matched_objects)
+
+        return final_objects
 
     @classmethod
     def paginate(cls, pages_name, items, more=False, next_id=None):
@@ -111,13 +193,6 @@ class Helper:
         """Given a floating-point number, produce a datetime instance"""
         return datetime.datetime.utcfromtimestamp(timestamp_float)
 
-    @classmethod
-    def string_to_datetime(cls, timestamp_string):
-        """Convert string timestamp to datetime instance."""
-        try:
-            return datetime.datetime.strptime(timestamp_string, "%Y-%m-%dT%H:%M:%S.%fZ")
-        except ValueError:
-            return datetime.datetime.strptime(timestamp_string, "%Y-%m-%dT%H:%M:%SZ")
 
     @classmethod
     def generate_status(
@@ -198,18 +273,16 @@ class Helper:
         elif "created" in obj:
             return cls.string_to_datetime(obj["created"])
         else:
-            return cls.string_to_datetime(obj["_date_added"])
+            return cls.string_to_datetime(obj["date_added"])
 
     @classmethod
     def find_version_attribute(cls, obj):
-        """Depending on the object, modified, created or _date_added is used to store the
-        object version"""
         if "modified" in obj:
             return "modified"
         elif "created" in obj:
             return "created"
-        elif "_date_added" in obj:
-            return "_date_added"
+        elif "date_added" in obj:
+            return "date_added"
 
     @classmethod
     def check_for_dupes(cls, final_match, final_track, res):
@@ -250,8 +323,8 @@ class Helper:
     @classmethod
     def remove_hidden_field(cls, objs):
         for obj in objs:
-            if "_date_added" in obj:
-                del obj["_date_added"]
+            if "date_added" in obj:
+                del obj["date_added"]
 
     @classmethod
     def find_added_headers(cls, headers, manifest, obj):
@@ -346,12 +419,12 @@ class Filter:
         return match_objects
 
     def filter_by_added_after(self, data, manifest_info, added_after_date):
-        added_after_timestamp = Helper.string_to_datetime(added_after_date)
+        added_after_timestamp = string_to_datetime()
         new_results = []
         # for manifest objects and versions
         if manifest_info is None:
             for obj in data:
-                if Helper.string_to_datetime(obj["date_added"]) > added_after_timestamp:
+                if string_to_datetime() > added_after_timestamp:
                     new_results.append(obj)
         # for other objects with manifests
         else:
@@ -360,7 +433,7 @@ class Filter:
                 for item in manifest_info:
                     item_time = Helper.find_att(item)
                     if item["id"] == obj["id"] and item_time == obj_time and \
-                            Helper.string_to_datetime(item["date_added"]) > added_after_timestamp:
+                            string_to_datetime() > added_after_timestamp:
                         new_results.append(obj)
                         break
         return new_results
@@ -380,7 +453,7 @@ class Filter:
             # if "all" is in the list, just return everything
             return data
 
-        actual_dates = [Helper.string_to_datetime(x) for x in version_indicators if x != "first" and x != "last"]
+        actual_dates = [string_to_datetime() for x in version_indicators if x != "first" and x != "last"]
         # if a specific version is given, filter for objects with that value
         if actual_dates:
             id_track = []

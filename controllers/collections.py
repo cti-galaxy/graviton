@@ -94,7 +94,7 @@ class Collections(object):
                 intersect_by='id',
                 objects_index=f'{api_root}-objects', objects_query_string=objects_query_string,
                 manifests_index=f'{api_root}-manifest', manifests_query_string=manifests_query_string,
-                version_range=version_range, added_after_range=added_after_range
+                added_after_range=added_after_range
             )
 
             # Version and Paginate The Results
@@ -102,13 +102,18 @@ class Collections(object):
                 manifest_ids = ",".join(intersected_results).replace(',', ' OR ')
                 query_string = QueryString(query=f"id:('{manifest_ids}')", default_operator="AND")
                 pre_versioning_results = cls.es_client.scan(index=f'{api_root}-manifest', query_string=query_string)
-                pre_pagination_results = Helper.match_version(stix_data=pre_versioning_results,versions=versions)
+                print(query_string)
+                pre_pagination_results = Helper.fetch_objects_by_versions(stix_objects=pre_versioning_results,
+                                                                          versions=versions)
                 if -1 < size < max_page_size:
                     results = cls.es_client.search(index=f'{api_root}-manifest', query_string=query_string,
                                                    search_from=base_page, size=size, sort_by=sort_by)
                 else:
                     results = cls.es_client.search(index=f'{api_root}-manifest', query_string=query_string,
                                                    search_from=base_page, size=max_page_size, sort_by=sort_by)
+                results = {
+                    'objects': pre_versioning_results
+                }
             else:
                 results = {
                     "objects": []

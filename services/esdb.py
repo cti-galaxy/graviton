@@ -196,10 +196,7 @@ class EsClient:
 
         for result in scan_results:
             results.append(result.to_dict())
-        return {
-            "more": False,
-            "objects": results,
-        }
+        return results
 
     def search(self, index: str, query_string: QueryString, search_from: int, size: int,
                sort_by: dict = None, fields: list = None):
@@ -226,7 +223,7 @@ class EsClient:
     def manifest_intersect(self, intersect_by: str,
                            objects_index: str, objects_query_string: QueryString,
                            manifests_index: str, manifests_query_string: QueryString,
-                           version_range: Range = None, added_after_range: Range = None
+                           added_after_range: Range = None
                            ):
         objects_results = []
         objects_search = Search(using=self.client, index=objects_index).query(objects_query_string).source(intersect_by)
@@ -237,8 +234,6 @@ class EsClient:
         manifests_results = []
         manifests_search = Search(using=self.client, index=manifests_index).query(manifests_query_string)\
             .source(intersect_by)
-        if version_range:
-            manifests_search = manifests_search.query(version_range)
         if added_after_range:
             manifests_search = manifests_search.query(added_after_range)
         manifests_scan_results = manifests_search.scan()
