@@ -102,7 +102,6 @@ class Collections(object):
                 manifest_ids = ",".join(intersected_results).replace(',', ' OR ')
                 query_string = QueryString(query=f"id:('{manifest_ids}')", default_operator="AND")
                 pre_versioning_results = cls.es_client.scan(index=f'{api_root}-manifest', query_string=query_string)
-                print(query_string)
                 pre_pagination_results = Helper.fetch_objects_by_versions(stix_objects=pre_versioning_results,
                                                                           versions=versions)
                 if -1 < size < max_page_size:
@@ -112,7 +111,7 @@ class Collections(object):
                     results = cls.es_client.search(index=f'{api_root}-manifest', query_string=query_string,
                                                    search_from=base_page, size=max_page_size, sort_by=sort_by)
                 results = {
-                    'objects': pre_versioning_results
+                    'objects': pre_pagination_results
                 }
             else:
                 results = {

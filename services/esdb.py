@@ -104,6 +104,7 @@ class EsClient:
             if not self.collections_data:
                 self.collections_data = self.TAXXI_DEFAULT_COLLECTIONS
             for root in self.roots_data:
+                manifests_data = []
                 if not self.client.indices.exists(f"{root.get('_id')}-manifest"):
                     log_info(f"Loading default data in manifest index: {root.get('_id')}-manifest")
                     # Create A Manifest Index Per Root
